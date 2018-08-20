@@ -1,0 +1,108 @@
+go_on=0;
+if online
+    if exist('y') & isvalid(ai)
+        yA=double(y)/2^15;            
+        micro_iA=ai.Microphone.Index; speaker_input_iA=ai.Loudspeaker.Index;    
+        scanrateA=ai.SampleRate;
+        go_on=1;    
+    else
+        disp('No data online');
+        go_on=0;    
+    end            
+else
+    set(hFilecountA,'string',filecounts,'Value',filecountA);
+    filenameA=[loadpath birdnameA '/' dirnameA '/' namehelpA];
+    filename_userdataA=[loadpath birdnameA '/' dirnameA '/U_' namehelpA '.mat'];
+    
+    %%%%%%%%%%%%% LOAD THE FILE
+    if exist('filenameA') & exist('filename_userdataA')
+        yAInfo=daqread(filenameA,'info');
+        yA=daqread(filenameA)';
+        load(filename_userdataA);
+        
+        scanrateA=yAInfo.ObjInfo.SampleRate;        micro_iA=get_channel_i(yAInfo,'Microphone');
+        stim_signal_iA=get_channel_i(yAInfo,'Stim Signal');
+        speaker_input_iA=get_channel_i(yAInfo,'Loudspeaker');
+        go_on=1;
+    else
+        disp('Data cannot be loaded');
+        go_on=0;
+    end
+end
+if go_on
+    if (online & do_feedback) | (strcmp(callerA.name,'Feedback') & strcmp(callerA.prefix,'F'))
+        hh=waitbar(0,'Cleaning up noise....'); drawnow;          
+        taps=1500;
+        max_speaker_input=max(yA(speaker_input_iA,:));
+        for i=1:length(userdata.golay_times)
+            while (abs(yA(speaker_input_iA,userdata.golay_times(i)+1))<.2*max_speaker_input) & userdata.golay_times(i)<size(yA,2)-1
+                userdata.golay_times(i)=userdata.golay_times(i)+1;
+            end
+        end
+        %plot(y(1,1:end-post_trigger_samples)); axis tight;        
+        lp=[];   lasti=1;
+        for gi=1:length(userdata.golay_times)
+            ind1=userdata.golay_times(gi); ind2=min(size(yA,2),ind1+length(userdata.golay_dat)+1000);
+            Ii=get_golay(yA([speaker_input_iA micro_iA],ind1:ind2),1,2);
+            [db,lph]=cancelfeedback(Ii(1:taps),yA(speaker_input_iA,lasti:ind2),yA(micro_iA,lasti:ind2),0);
+            lp=[lp lph];
+            lasti=ind2+1;
+        end
+        close(hh);
+        %%%%%%%%%% TOP PLOT
+        axes(hAxesA(2));hold off;
+        plot(yA(micro_iA,:)); hold on;
+        plot(yA(stim_signal_iA,:)); hold on;
+        plot(lp,'r');axis tight;
+        minmicA=min(yA(micro_iA,:));    maxmicA=max(yA(micro_iA,:));
+        for i=1:length(userdata.golay_times)
+            plot((userdata.golay_times(i))*[1 1],[minmicA maxmicA],'k');
+            %plot((pre_trigger_samples+userdata.golay_times(i))*[1 1],[minmicA maxmicA],'r');
+        end
+        for i=1:length(userdata.noise_starts)
+            plot(userdata.noise_starts(i)*[1 1],[minmicA maxmicA],'g');
+        end
+        for i=1:length(userdata.noise_stops)
+            plot(userdata.noise_stops(i)*[1 1],[minmicA maxmicA],'y');
+        end
+        plot(userdata.samp_times*scanrateA,userdata.on_amps/userdata.thr_amp,'k');
+        plot(userdata.samp_times*scanrateA,userdata.off_amps/userdata.thr_amp,'k--');
+        plot([1 length(lp)],[1 1],'m');
+        xlim([1 length(lp)]);
+        ylim([minmicA maxmicA]);
+        if length(lp)>0
+        %%%%%%%%%%%%%%%%%%% BOTTOM PLOT
+        axes(hAxesA(1));hold off;
+        specgram1(lp,512,scanrateA,400,200); ylim([0 10000]);  axis off; 
+    else
+        disp('Some problem with variable lp');
+    end
+    else
+        axes(hAxesA(2));hold off;
+        if stim_signal_iA>-1
+            plot(yA(2,1:end-userdata.post_trigger_samples),'r'); hold on;
+        end
+        plot(yA(1,:)); axis tight  %plot(yA(1,1:end-userdata.post_trigger_samples)); axis tight;
+        set(hAxesA(2),'XTickLabel',[],'XTick',[])
+        axes(hAxesA(1));    hold off;
+        [spectra,f,t]=specgram1(yA(1,:),512,scanrateA,400,350); ylim([0 12000]);  axis on;
+        spectra=abs(spectra);
+        imagesc(t,f,20*log10(spectra+10e-1));axis xy; colormap(jet);ylim([0 10000]); ylim([0 12000]);  axis on;
+        ratio=PSRatio(scanrateA,spectra,t,f);
+        %axes(hAxesA(1));    hold off;
+        %plot(t,ratio);axis tight; hold on;
+        %t_line=threshold*ones(length(t));
+        %plot(t,t_line,'color',[0 1 1]);hold off;
+        
+        %is this a song
+        %song=tcrossings(ratio,t,threshold);
+        tcrossings;
+        if (song)
+            set(hText_ctrA,'String','Song');
+        else
+            set(hText_ctrA,'String','Junk');
+        end
+                %specgram1(y(1,1:end-userdata.post_trigger_samples),1024,scanrateA,800,700); ylim([0 8000]);  axis off;      
+    end
+    
+end

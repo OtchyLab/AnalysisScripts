@@ -1,0 +1,20 @@
+function undirected=sortdirected(cell, directed_vector)
+
+counter=1;
+for i=1:length(cell.rec)
+    for j=1:length(directed_vector)
+        if (go==1)
+            if (i==directed_vector(j))
+            else
+                go=0;
+                undirected.rec(1,counter)=cell.rec(i);
+                undirected.motif(counter,:)=cell.motif(i,:);
+                undirected.syll(counter,:)=cell.syll(i,:);
+                undirected.spikes(counter,:)=cell.spikes(i,:);
+                counter=counter+1;
+                
+            end
+        end
+    end
+    end
+end

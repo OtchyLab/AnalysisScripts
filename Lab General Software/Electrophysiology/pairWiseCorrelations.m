@@ -1,0 +1,116 @@
+function [R] = pairWiseCorrelations(startMotif, endMotif, spikeTimes, sampRate, bInstant, bRotate, gaussWidth, startTime,endTime)
+%Aaron Andalman 2004
+%Code for Bence base on cellMotifPairWiseCorrelations.
+%The code is a bit difficult to read because it has remnants from the
+%original version.
+
+%INPUT
+%spikeTimes: the cell array containing hte spiketimes for each motif for which you want pairwise correlations.
+%the spikestimes must be relative to some marker within the motif.
+%sampRate: the sampling rate.
+%bInstant: correlate instantaneous firing rate rather than spikes.
+%gaussWidth: if non-zero, then filter signals with gaussian with 1/e point
+%at gaussWidth seconds.
+%startTime: spikes prior to this time are ignored.  Shorter trains are zero
+%padded.  Choose this time based on your recordings and the length of the
+%song.
+%endTime: spikes after this time are ignored.
+
+%OUTPUT
+%R is a matrix containing the R value for each pair.  Not any motif that
+%contains no spikes will result in NaN.   
+
+%If bRotate is true, then includes all values<1 in 100 R matrixies with each
+%with different random rotations.
+
+% startMotif = 1;
+% endMotif = length(spikeTimes);
+
+%% No longer necessary in code for Bence..
+%Determine subset of times relative to the marker
+%for which all motifs have spike data.
+%commonStartTime = -inf;
+%commonStopTime = inf;
+%for(nMotif = startMotif:endMotif)
+%   marker = motifData.marker;
+%   if(1-(marker-1) > commonStartNdx) disp(-1 * nMotif); end
+%   if((motifData.ndxStop-motifData.ndxStart+1) - (marker-1) < commonStopNdx) disp(nMotif); end
+%   commonStartNdx = max(commonStartNdx, 1-(marker-1));
+%   commonStopNdx = min(commonStopNdx, (motifData.ndxStop-motifData.ndxStart+1) - (marker-1));
+%end
+%commonStartTime = ndx2time(commonStartNdx,sampRate);
+%commonEndTime = ndx2time(commonStopNdx,sampRate);
+
+startNdx = startTime * sampRate + 1;
+endNdx = endTime * sampRate + 1;
+
+%Remove motifs that have no spikes in time window.  
+nCount = 0;
+motifMap = [];
+for(nMotif = startMotif:endMotif)
+    %if(length(find(spikeTimes{nMotif} >= startTime & spikeTimes{nMotif} <= endTime)))
+        nCount = nCount + 1;
+        motifMap(nCount) = nMotif;
+    %end
+end
+
+%Generate gauss for window
+if(exist('gaussWidth') & gaussWidth > 0)
+    sigma = gaussWidth / sqrt(2);
+    x = [gaussWidth*-4:1/sampRate:gaussWidth*4];
+    gauss = (1/sqrt(2*pi)*sigma)*exp(-x.^2/(2*sigma^2));
+end
+    
+%Clip out and filter the spike train of each motif
+sigs = zeros(length(motifMap), endNdx - startNdx + 1);%sometimes 2 instead of 1 here ???
+for(nMotif = startMotif:endMotif)
+    spikeTime = spikeTimes{nMotif};
+    %if(length(find(spikeTime >= startTime & spikeTime <= endTime)))      
+        if(bInstant)       
+            error('code not completed');
+            %sig(nMotif,:) =  spikeTimes2InstantFiringRate(spike   
+        else            
+            sig = convertSpikeTimesToTrain(spikeTime, startTime, endTime, 1/sampRate);
+        end
+        
+        if(bRotate)
+            rotation = ceil(rand(1,1) * length(sig));
+            sig = [sig(rotation:end);sig(1:rotation-1)];
+        end        
+        
+        if(exist('gaussWidth') & gaussWidth > 0)
+            sig  = conv(sig, gauss);
+            sig = sig(floor(length(gauss)/2):end - floor((length(gauss)+1)/2));
+        end
+          
+%         sigs(find(motifMap == nMotif),:) = sig';
+            l= length(sig);
+            s=size(sigs,2);
+            sigs(nMotif-startMotif+1,:) = sig';
+    %end
+end
+
+R = corrcoef(sigs');
+
+%Compute correlations of all pairs for common subset of motif.
+% sigsq = var(sigs');
+% Q = zeros(length(cell.motifData)) * nan;
+% biasedScale = 1/size(sigs,2);
+% for(nMotif1 = 1:length(cell.motifData))
+%     motifData1 = cell.motifData{nMotif1};
+%     if(isfield(motifData1,'spikeNdx'))
+%         for(nMotif2 = nMotif1:length(cell.motifData))
+%             motifData2 = cell.motifData{nMotif2};
+%             if(isfield(motifData2,'spikeNdx'))                
+%                 Q(nMotif1,nMotif2) = cov(sigs(nMotif1,:),sigs(nMotif2,:))/
+%             end
+%         end
+%     end
+% end
+        
+
+%Perhaps faster?
+%Given a matrix xcorr will complete all the pairwise correlations, but requires making        
+%pairCorr = xcorr( allSpikeTrains,1,'unbiased');
+
+

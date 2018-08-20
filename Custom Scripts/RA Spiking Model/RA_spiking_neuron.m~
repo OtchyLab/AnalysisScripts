@@ -1,0 +1,180 @@
+function [spike_times, Vm] = RA_spiking_neuron(HVC_spikes, inh_HVC, numTrials, t, numHVC, numLMAN)
+% [spike_times, Vm] = RA_spiking_neuron(HVC_spikes, inh_HVC, numTrials, t_stop, dt, numHVC, numLMAN)
+% written by TMO 06/11/2016; last modified 06/13/2016
+%
+% This script implements a model of RA spiking neurons (i.e., it models
+% membrane voltage responses based on biophysical constants and HVC/LMAN
+% inputs. The code is based on the "RA_toy_model_lognormal_orig" script
+% used in Garst-Orozco et al 2015.
+%
+% Inputs:
+% HVC_spikes:   array of length t_stop/dt; contains the weighted inputs
+%               from HVC
+% numTrials:    scalar value for the number of trials/renditions to simulate (def: 20)
+% t_stop:       scalar value for duration of simulation (ms) (def: 1000)
+% dt:           scalar value for the time step (ms) (def: 0.2)
+% numHVC:       scalar value for weight factor for HVC input  (def: 4)
+% numLMAN:     scalar value for weight factor for LMAN input (def: 1)
+% inh_HVC       scalar value for HVC-mediated inhibition (includes weighting and balanced) (def: 400)
+%
+% Outputs:
+% spike_times: cell array of length (trials); each row contains the simulated
+%              spike times (in ms) for one trial.
+% Vm:          matrix of size (numTrials x t_stop/dt); each row is the simulated
+%              membrane voltage for one trial.
+%
+
+%Variable check and set defaults
+if nargin < 2
+    display('You need to specify at least two inputs: HVC_spikes and inh_HVC.')
+    return
+elseif nargin == 2
+%     %Useful inputs
+%     numTrials = 20;
+%     t_stop = 1000;
+%     dt = 0.2;
+%     inh_HVC_ratio = 400;
+%     numHVC = 4;
+%     numLMAN = 1;
+%     inh_HVC = 10;
+elseif nargin ~= 6
+    display('Something is funky with those inputs... check your cal statement.')
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+%Constants for simulation
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Define the length of the simulated "song" in a trial
+% t = dt : dt : t_stop; %time array
+dt = t(1); %time step size
+
+%RA neuron parameters (time constants, voltages, input weights)
+tau_s = 5;      % RA synapse time constant (ms)
+tau_m = 20;     % RA membrane time constant (ms)
+V_th = 20;      % RA firing threshold (mV)
+V_r = 0;        % RA resting membrane voltage (everything is offset by +70mV)
+t_ref = 1;      % Refractory period of RA (ms)
+tau_NMDA = 100; % NMDA receptor time constant (ms)
+c_Mg = 0.7;     % Mg ion concentration (mM)
+LMAN_res = numLMAN * 130; % LMAN input resistance (in MOhms)
+HVC_res = numHVC * 130;  % HVC input resistance (in MOhms)
+
+%LMAN input characteristics
+LMAN_rate = 80; % Rate of LMAN input (Hz)
+inh_LMAN = 0;
+noise_std = 0;
+W_LMAN =  150/1000;   % LMAN-RA synaptic strength (pA) For NMDA
+N_ratio = 0.9; % NMDA/(NMDA+AMP) ratio
+
+%Total inhibition
+inh = inh_LMAN + inh_HVC;
+
+%START HERE
+prev_spike_time = 0;
+RA_spikes = zeros(numTrials, length(t));
+ISI = zeros(numTrials, length(t));
+% recSum = zeros(numTrials,1);
+%Loop on trials from this particular neuron
+for i = 1 : numTrials
+    
+    % LMAN input to RA neuron (rate model of random input)
+    LMAN_spikes = rand(size(t))< (LMAN_rate * dt / 1000);
+    
+    if i == 1
+        LMAN_AMPA_input = zeros(size(t));
+        LMAN_NMDA_input = zeros(size(t));
+        HVC_input = zeros(size(t));
+        V_RA = zeros(size(t));
+    else
+        LMAN_AMPA_input(1) = LMAN_AMPA_input(end);
+        LMAN_NMDA_input(1) = LMAN_NMDA_input(end);
+        HVC_input(1) = 1.5 * HVC_input(tt);
+        V_RA(1) = V_RA(end);
+    end
+    
+    %Loop on time through the simulation
+    ref = 0;
+    prev_tt = 1;
+    for tt = 2 : length(t)
+        
+        %Mg-block
+        x_Mg = 1/(1 + exp(- 0.062 * (V_RA(tt-1)-70)) * c_Mg/3.57);
+        
+        %LMAN input rate of change
+        dLMAN_AMPA_input_dt = (- LMAN_AMPA_input(tt - 1) + tau_s * (1-N_ratio) * W_LMAN * LMAN_spikes(tt)/dt)/tau_s;
+        dLMAN_NMDA_input_dt = (- LMAN_NMDA_input(tt - 1) + tau_NMDA * N_ratio * x_Mg * W_LMAN * LMAN_spikes(tt)/dt)/tau_NMDA;
+        
+        %HVC input rate of change
+        dHVC_input_dt = ( - HVC_input(tt - 1) + tau_s * HVC_spikes(tt)/dt)/tau_s;
+        
+        %LMAN input
+        LMAN_AMPA_input(tt) = LMAN_AMPA_input(tt - 1) + dt * dLMAN_AMPA_input_dt;
+        LMAN_NMDA_input(tt) = LMAN_NMDA_input(tt - 1) + dt * dLMAN_NMDA_input_dt;
+        
+        %HVC input
+        HVC_input(tt) = HVC_input(tt - 1) + dt * dHVC_input_dt;
+        
+        %Randomized noise added to the simulation
+        I_noise = noise_std/sqrt(dt) * randn;
+        
+        %RA neuron voltage rate of change summations for all inputs
+        dV_RA_dt = (-V_RA(tt-1) + LMAN_AMPA_input(tt) * LMAN_res + LMAN_NMDA_input(tt) * LMAN_res + HVC_input(tt) * HVC_res - inh + I_noise)/tau_m;
+        
+        %Refractory period
+        if ref<=0
+            V_RA(tt) = V_RA(tt-1) + dt * dV_RA_dt;
+        else
+            V_RA(tt) = 0;
+        end
+        ref = ref-dt;
+        
+        %Spiking conditions for RA neurons
+        if (V_RA(tt) >=V_th) && (ref<=0)
+            RA_spikes(i,tt) = 1;
+            V_RA(tt) = V_r;
+            ref = t_ref;
+            ISI(i, prev_tt : tt) = t(tt) - prev_spike_time;
+            prev_spike_time = t(tt);
+            prev_tt = tt;
+        end
+        
+    end
+
+    %Collect the membrane voltage for this trial
+    Vm(i,:) = V_RA;
+    
+    %Collect spike times for later stats
+    RA_spike_times = RA_spikes(i,:) .* t;
+    RA_spike_times(RA_spike_times == 0) = [];
+    spike_times{i} = RA_spike_times;
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

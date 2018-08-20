@@ -1,0 +1,26 @@
+function directed=sortdirected(cell, directed_vector)
+
+counter=1;
+for i=1:length(cell.rec)
+    go=1;
+    if (i>105)
+        go=0;
+        directed(counter)=i;
+        counter=counter+1;
+    end
+    if (go==1)
+    for j=1:length(directed_vector)
+        if (go==1)
+            if (i==directed_vector(j))
+                go=0;
+                directed.rec(1,counter)=cell.rec(i);
+                directed.motif(counter,:)=cell.rec(i,:);
+                directed.syll(counter,:)=cell.syll(i,:);
+                directed.spikes(counter,:)=cell.rec(i,:);
+                counter=counter+1;
+                
+            end
+        end
+    end
+    end
+end

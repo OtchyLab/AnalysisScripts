@@ -1,0 +1,75 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  DEFINE SOME DEPENDENT VARIABLES
+path(path,'..');path(path,'../analyze'); %addends a new directory to the search path
+state_ai_2=0;  % 1=running    0=stop
+loudspeaker_warning_2=0;
+
+if ~exist('do_save_2')
+    do_save_2=do_save_default_2;
+end
+if ~exist('do_plot_2')
+    do_plot_2=do_plot_default_2;
+end
+if ~exist('directed_2')
+    directed_2=directed_default_2;
+end
+do_record_2=0; is_record_2=0;
+i_2=regexp(savepath,'\/'); savepath_win=savepath; savepath_win(i_2)='\';
+dirname_2= datestr(date,29);  % directory for saving of data
+pre_trigger_samples_2=ceil(pre_trigger_int_2*scanrate_2);
+mid_trigger_samples_2=ceil(mid_trigger_int_2*scanrate_2);
+post_trigger_samples_2=ceil(post_trigger_int_2*scanrate_2);
+peek_samples_2=peek_period_2*scanrate_2; %
+%trigger_cutout_i=round(on_mic/scanrate*trigger_samples);
+
+%if strcmp(caller,'Feedback'); %huh?? what does this do. I removed it. BO
+
+%%%%%%% NOISE
+noise_samples_2=noise_int_2*scanrate_o_2; % duration of noise pattern in samples, a power of 2
+noise_cutout_i_2=round(cutout_noise_2/scanrate_o_2*noise_samples_2);
+
+noise_envelope_2=ones(noise_samples_2,1);
+ramp_samples_2=floor(noise_samples_2/10);
+%noise_envelope(1:ramp_samples)=1./(1+exp(-(((1:ramp_samples)-ramp_samples/2)/ramp_samples*12)));
+noise_envelope_2(1:ramp_samples_2)=(0:ramp_samples_2-1)/(ramp_samples_2-1);
+noise_envelope_2(end:-1:end-ramp_samples_2+1)=noise_envelope_2(1:ramp_samples_2);
+
+    
+    if ~exist('pfeedback_2')
+    pfeedback_2=pfeedback_default_2;
+end
+    if on_mic_2(2)>cutout_noise_2(2) | on_mic_2(1)<cutout_noise_2(1)
+    fprintf('Problem with noise-microphone cutout \n');
+    break
+end
+if pre_golay_int_2>mid_trigger_int_2 | pre_golay_int_2<noise_int_2
+    fprintf('Problem with onset of Golay pulses\n');
+    break
+end
+end
+
+thr_amp=3;% trigger_threshold (scale), dot not change this value
+max_amp=2*thr_amp; % maximum amplitude for display
+axis_amp=2*thr_amp; % axis limits for display
+on_amp=0;  % current ON-amplitude
+off_amp=0; % current OFF-amplitude
+
+bytes=8000;
+userdata.caller=caller;
+userdata.birdname=birdname;
+userdata.micro=micro;
+userdata.speaker_input=speaker_input;
+userdata.channels=channels;
+%userdata.chans=chans;
+userdata.pre_trigger_samples=pre_trigger_samples;
+userdata.mid_trigger_samples=mid_trigger_samples;
+userdata.post_trigger_samples=post_trigger_samples;
+
+if strcmp(caller,'Feedback');
+    userdata.channels_o=channels_o;
+    userdata.scanrate_o=scanrate_o;
+    userdata.speaker_input=speaker_input;
+    userdata.cutout_noise=cutout_noise;
+    userdata.on_mic=on_mic;
+    userdata.intergolay_int=intergolay_int;
+end
+ 

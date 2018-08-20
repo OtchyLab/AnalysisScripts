@@ -1,0 +1,867 @@
+function varargout = StimExplorer(varargin)
+% STIMEXPLORER MATLAB code for StimExplorer.fig
+%      STIMEXPLORER, by itself, creates a new STIMEXPLORER or raises the existing
+%      singleton*.
+%
+%      H = STIMEXPLORER returns the handle to a new STIMEXPLORER or the handle to
+%      the existing singleton*.
+%
+%      STIMEXPLORER('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in STIMEXPLORER.M with the given input arguments.
+%
+%      STIMEXPLORER('Property','Value',...) creates a new STIMEXPLORER or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before StimExplorer_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to StimExplorer_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+
+% Edit the above text to modify the response to help StimExplorer
+
+% Last Modified by GUIDE v2.5 09-Mar-2018 16:52:29
+
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @StimExplorer_OpeningFcn, ...
+                   'gui_OutputFcn',  @StimExplorer_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+
+function StimExplorer_OpeningFcn(hObject, eventdata, handles, varargin)
+
+%Constants
+handles.fs = 44150;
+
+%Set GUI control defaults
+set(handles.radio_plotDensity, 'Value', 1)
+set(handles.radio_plotRends, 'Value', 0)
+set(handles.radio_alignEdge, 'Value', 1)
+set(handles.radio_alignTTL, 'Value', 0)
+set(handles.popup_feature, 'Value', 1)
+
+
+
+%Clear axis lables
+set(handles.axes_stimTicks, 'Box', 'off', 'XTick', [], 'YTick', [])
+
+% Choose default command line output for StimExplorer
+handles.output = hObject;
+
+guidata(hObject, handles);
+
+function varargout = StimExplorer_OutputFcn(hObject, eventdata, handles) 
+
+varargout{1} = handles.output;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   Common Functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function cb_spectrogram_click(hObject, evnt)
+%Capture the click point and axes name
+handles = guidata(hObject);
+
+%Delect existing marker (if it's there)
+if isfield(handles, 'alignPointHandle')
+    if ~isempty(handles.alignPointHandle)
+        delete(handles.alignPointHandle);
+        handles.alignPointHandle = [];
+    end
+end
+
+%Capture the click point
+click = get(gca,'CurrentPoint');
+clickTime = click(1, 1);
+
+%Find the syllable edge that is closest to the click-point
+tStarts = handles.data.templatesyllBreaks';
+tStarts = tStarts(:)';
+[~, ind] =min(abs((tStarts-clickTime)));
+closestEdge = tStarts(ind);
+
+%Set the alignment point
+handles.alignPoint = closestEdge + str2double(get(handles.edit_offset, 'String'));
+
+%Plot the alignment point
+set(gca, 'Clipping', 'off'); hold(gca, 'on')
+handles.alignPointHandle = plot(handles.alignPoint, -5, '^r', 'MarkerSize', 10);
+
+guidata(hObject, handles);
+
+function clearStimAxes(handles)
+%Clear each of the data axes
+cla(handles.axes1);
+cla(handles.axes2);
+cla(handles.axes_diff);
+linkaxes([handles.axes1,handles.axes2,handles.axes_diff],'off')
+
+function proj = extractProjections(audio)
+%Function transforms the audio cell array into a variety of projections,
+%each returned as a field of cells
+
+%Status indicator
+h = waitbar(0,'Extracting feature projections. Please wait...');
+
+%Bandpass Audio filtering (300-8000kHz)
+gain = 1; hp = 300; lp = 8000; fs = 44150;
+wn = round((5/1000)*fs); %smoothing window in ms
+HP_fNorm = hp/(fs/2);
+LP_fNorm = lp/(fs/2);
+[BP_b,BP_a] = butter(4,[HP_fNorm LP_fNorm]);
+
+%Apply zero-phase filtering
+filtAudio = cellfun(@(x) filtfilt(BP_b, BP_a, gain*(x-mean(x))), audio, 'UniformOutput', 0);
+waitbar(1/3)
+
+%Smoothed audio envelop
+envlp = cellfun(@(x) smooth(x.^2, wn, 'moving')', filtAudio, 'UniformOutput', 0); 
+% [envlp, ~] = cellfun(@(x) envelope(x,wn,'rms'), filtAudio, 'UniformOutput', 0); %The envelop function may be better here...
+waitbar(2/3)
+
+%Spectral features
+[AM, FM, entropy, pitchGood, pitchChose] = cellfun(@(x) stripSpectrals(x, fs), filtAudio, 'UniformOutput', 0);
+waitbar(3/3)
+
+%What other projections? PCA? (would have to be timewarped first)
+
+
+
+%Output
+proj = [];
+proj.envelp = envlp;
+proj.AM = AM;
+proj.FM = FM;
+proj.entropy = entropy;
+proj.pitchGood = pitchGood;
+proj.pitchChose = pitchChose;
+close(h)
+
+function [AM, FM, Entropy, PitchGood, PitchChose] = stripSpectrals(audio, fs)
+%Chortstop function to pretty-fy the coding in extractProjections
+
+%Extract spectral features
+features = koenigSpectral(audio, fs);
+
+%Strip to vars
+AM = features.AM';
+FM = features.FM';
+Entropy = features.Entropy';
+PitchGood = features.PitchGoodness';
+PitchChose = features.Pitch_chose';
+
+function handles = align2Stim(handles)
+
+function [t, tmin, tmax] = align2timepoint(path, audio, pnt, scaling)
+%Shortstop function to pretty-fy the coding for plotting function outputs the long-form
+%timeseries for plotting
+
+%Lookup points
+ind = find(path(:,1)==pnt);
+warpedOut = round(mean(path(ind,2)));
+
+%Transform into samples
+sampPnt = round(scaling*warpedOut);
+
+%Generate time vector
+t = (1:numel(audio)) - sampPnt;
+
+%Grab the limits while we're here
+tmin = min(t);
+tmax = max(t);
+
+function [bStim, bNoStim] = generateMask(mask)
+%Setup mask
+bStim = ~mask.flag & mask.stimIdx;
+bNoStim = ~mask.flag & ~mask.stimIdx;
+
+function [scaledMat, X] = createDensityImage(dataMatrix, minVal, maxVal)
+%figure out how to do this
+
+%What size an image we talking about here?
+rs = 100;
+[numRends, dur] = size(dataMatrix);
+% minVal = min(dataMatrix(:));
+% maxVal = max(dataMatrix(:));
+
+output = NaN(rs,dur);
+for i = 1:dur
+    %Calculate the PDF of the data column
+    [X,p] = epdf(dataMatrix(:,i), rs, minVal, maxVal);
+    
+    %Count how many non-NaNs are in the column
+    numPres = sum(~isnan(dataMatrix(:,i)));
+    
+    %Load scaled data in the column
+%     output(:,i) = smooth(numPres * p', 3, 'moving');
+    output(:,i) = numPres * p';
+end
+
+scaledMat = output./numRends;
+
+function [rend, meanstd] = createRenditionSeries(dataMatrix, tseries)
+%The aim here is to convert the dataMatrix data into a format that can be
+%plotted with a single "line" function. "Why?" you say? to reduice the number of
+%graphics objects created. With large datasets, these plots become
+%unmanageable and grind MATLAB to a halt. Will also calculate the mean and
+%std while we're here
+
+%Summary stats
+stimPlot_m = nanmean(dataMatrix,1);
+stimPlot_s = nanstd(dataMatrix, 1, 1);
+
+%Size of the matrix to deal with
+m = size(dataMatrix,1);
+
+%Expand the timeseries data for each rendition
+tseries_mat = repmat(tseries, m, 1);
+
+%Create the nans column to append
+nansBuffer = NaN(m,1);
+
+%Append buffer columns
+tseries_mat = [tseries_mat, nansBuffer];
+dataMatrix = [dataMatrix, nansBuffer];
+
+%Reshape matrix to array
+temp = tseries_mat';
+stimPlot_t = temp(:)';
+
+temp = dataMatrix';
+stimPlot_y = temp(:)';
+
+%Generate output structures
+rend = [stimPlot_t; stimPlot_y];
+meanstd = [stimPlot_m; stimPlot_s];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   Plotting functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function handles = plotDensityImages(handles, stimDensity, nostimDensity, minVal, maxVal, zeroTick, scaling)
+
+numticks = 4;
+ylabs = round(linspace(minVal, maxVal, numticks), 2);
+yticks = round(linspace(0.5,size(stimDensity,1),numticks));
+colormap(parula)
+axes(handles.axes1)
+imagesc(stimDensity, [0, 0.2]); axis xy; axis tight
+set(gca, 'Box', 'off', 'TickDir', 'out', 'XTickLabels', [], 'YTick', yticks, 'YTickLabels', ylabs)
+
+axes(handles.axes2)
+imagesc(nostimDensity, [0, 0.2]); axis xy; axis tight
+set(gca, 'Box', 'off', 'TickDir', 'out', 'XTickLabels', [], 'YTick', yticks, 'YTickLabels', ylabs)
+
+axes(handles.axes_diff); axis tight
+imagesc((stimDensity - nostimDensity), [-0.1, 0.1]); axis xy
+set(gca, 'Box', 'off', 'TickDir', 'out', 'XTickLabels', [], 'YTick', yticks, 'YTickLabels', ylabs)
+set(gca, 'XTick', (scaling*(-1000:100:1000))-zeroTick, 'XTickLabels', -1000:100:1000)
+
+linkaxes([handles.axes1,handles.axes2,handles.axes_diff],'xy')
+
+function handles = plotRenditionPlots(handles, stimPlot, stimMean, nostimPlot, nostimMean, tseries, scaling)
+%Calculate the lims for plotting
+tmin = min(stimPlot(1,:));
+tmax = max(stimPlot(1,:));
+ymin = round(min([stimPlot(2,:), nostimPlot(2,:)]), 2);
+ymax = round(max([stimPlot(2,:), nostimPlot(2,:)]), 2);
+
+%Calculate tick marks
+numticks = 4;
+ylabs = round(linspace(ymin, ymax, numticks), 2);
+yticks = ylabs;
+
+axes(handles.axes1)
+xlim([tmin, tmax]); ylim([ymin, ymax]) 
+line(stimPlot(1,:), stimPlot(2,:)); hold on
+shadedErrorBar(tseries, stimMean(1,:), stimMean(2,:), '-r', 1)
+set(gca, 'Box', 'off', 'TickDir', 'out', 'XTickLabels', [], 'YTick', yticks, 'YTickLabels', ylabs)
+
+axes(handles.axes2)
+xlim([tmin, tmax]); ylim([ymin, ymax])  
+line(nostimPlot(1,:), nostimPlot(2,:)); hold on
+shadedErrorBar(tseries, nostimMean(1,:), nostimMean(2,:), '-r', 1)
+set(gca, 'Box', 'off', 'TickDir', 'out', 'XTickLabels', [], 'YTick', yticks, 'YTickLabels', ylabs)
+
+axes(handles.axes_diff)
+line(tseries, (stimMean(1,:) - nostimMean(1,:)), 'Color', 'k')
+axis tight; ys = ylim; ys = round([-max(abs(ys)), max(abs(ys))], 2);
+xlim([tmin, tmax]); ylim(ys) 
+set(gca, 'Box', 'off', 'TickDir', 'out', 'YTick', round(linspace(ys(1), ys(2), 3), 2), 'YTickLabels', round(linspace(ys(1), ys(2), 3), 2))
+set(gca, 'XTick', (scaling*(-1000:100:1000)), 'XTickLabels', -1000:100:1000)
+ 
+linkaxes([handles.axes1,handles.axes2,handles.axes_diff],'x')
+linkaxes([handles.axes1,handles.axes2],'y')
+
+function handles = plotReferenceTemplate(handles)
+%Plots the Spectrogram and reference markers
+
+%Plot spectrogram
+axes(handles.axes_spec); cla
+h = imagesc(-handles.data.template); hold on; axis xy
+colormap(gca, jet)
+
+%Plot the reference markers
+ys = ylim;
+t = handles.data.templatesyllBreaks'; t = t(:)';
+for i = 1:numel(t)
+    line([t(i), t(i)], ys, 'Color', 'k', 'LineStyle', ':', 'LineWidth', 2)
+end
+%Format the axis
+xlabel('Song Time (ms)'); ylabel('Hz')
+set(gca, 'Box', 'off', 'TickDir', 'out', 'XTick', -1000:100:1000, 'XTickLabels', -1000:100:1000, 'YTick', [0.5,size(handles.data.template,1)], 'YTickLabels', {'0', '8K'}),
+
+%Add in the click function
+set(h, 'ButtonDownFcn', @cb_spectrogram_click);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   File control functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function push_addDatasets_Callback(hObject, eventdata, handles)
+%This function adds new dataset files to the filelist, sorts them, and
+%displays in the listbox. Some basic processing is done, but no data is
+%loaded from the source. (That requires an additional button click.)
+
+%Initialize variable if necessary
+if ~isfield(handles, 'datasetFilename')
+    handles.datasetFilename = [];
+end
+
+%Check preconditions for loading files
+if ~isempty(handles.datasetFilename)
+    set(handles.text_message,'String',['Hey, dickhead: Try clearing the current datasets before adding new ones.']);
+    
+else
+    %Load the filelist
+    %Get the locations of the processed files (multiselect is possible)
+    [temp,path] = uigetfile('*.mat','Select the dataset file.','MultiSelect','on');
+    
+    if isequal(temp,0) || isequal(path,0)
+        %If they hit cancel or choose something dumb, generate error and end.
+        set(handles.text_message,'String','Dataset location invalid or cancelled. Pick a valid file.');
+    else
+        %If they don't, then parse the locations.
+        fnames = [];
+        if iscell(temp)
+            %If there is more than one files selected, struct it
+            for i = 1:size(temp,2)
+                fnames{i} = char(temp{i});
+                pathTot{i} = [path char(temp{i})];
+            end
+        else
+            %Otherwise, just copy it out.
+            fnames = temp;
+            pathTot = [path,temp];
+            i = 1;
+        end
+        
+        %This is the code for loading the first/only folder
+        handles.datasetFilename = pathTot;
+        datatitles = fnames;
+        
+        %Sort the datatitles alphabetically (which is also chronologically if
+        %only one bird) and use the index to sort the datasetFilename as well
+        if iscell(datatitles)
+            [handles.datatitles, ind] = sort(datatitles);
+            handles.datasetFilename = handles.datasetFilename(ind);
+        else
+            handles.datatitles = datatitles;
+            handles.datasetFilename = handles.datasetFilename;
+        end
+        
+        %Clear persistent structures
+        handles.data = [];
+        handles.proj = [];
+        handles.mask = [];
+        
+        %Set the message to show datasets replaced
+        set(handles.listbox_datasets,'String',handles.datatitles)
+        set(handles.text_message,'String',['Added ' num2str(i) ' new datasets to the active list']);
+    end
+end
+
+guidata(hObject, handles);
+
+function push_clearDatasets_Callback(hObject, eventdata, handles)
+%Get user confirmation on clearing the list
+button = questdlg('Are you sure you want to clear all datasets?','Clear datasets?','Yeah, fuck it.','Nooooo!','Nooooo!');
+
+if (strcmp(button,'Yeah, fuck it.'))
+    %Clear pointers to the datasets and their labels
+    handles.datasetFilename = [];
+    handles.datatitles = [];
+    
+    %Clear persistent structures
+    handles.data = [];
+    handles.proj = [];
+    handles.mask = [];
+        
+    %Add here whatever other shit needs to be cleared from memory
+
+
+    %Set the message to show datasets replaced
+    set(handles.push_load, 'BackgroundColor', [0.94, 0.94, 0.94])
+    set(handles.listbox_datasets,'String',handles.datatitles)
+    set(handles.text_message,'String','All datasets cleared.');
+else
+    set(handles.text_message,'String','Datasets are unchanged.');
+end
+
+guidata(hObject, handles);
+
+function push_addStims_Callback(hObject, eventdata, handles)
+%This function adds new dataset files to the filelist, sorts them, and
+%displays in the listbox. Some basic processing is done, but no data is
+%loaded from the source. (That requires an additional button click.)
+
+%Initialize variable if necessary
+if ~isfield(handles, 'stimFilename')
+    handles.stimFilename = [];
+end
+
+%Check preconditions for loading files
+if ~isempty(handles.stimFilename)
+    set(handles.text_message,'String',['Hey, dickhead: Try clearing the current stimFiles before adding new ones.']);
+    
+else
+    %Load the filelist
+    %Get the locations of the processed files (multiselect is possible)
+    [temp,path] = uigetfile({'*.mat'; '*.m'},'Select the file(s) containing stimulation paramaters.','MultiSelect','on');
+    
+    if isequal(temp,0) || isequal(path,0)
+        %If they hit cancel or choose something dumb, generate error and end.
+        set(handles.text_message,'String','StimParameters file location invalid or cancelled. Pick a valid file.');
+    else
+        %If they don't, then parse the locations.
+        fnames = [];
+        if iscell(temp)
+            %If there is more than one files selected, struct it
+            for i = 1:size(temp,2)
+                fnames{i} = char(temp{i});
+                pathTot{i} = [path char(temp{i})];
+            end
+        else
+            %Otherwise, just copy it out.
+            fnames = temp;
+            pathTot = [path,temp];
+            i = 1;
+        end
+        
+        %This is the code for loading the first/only folder
+        handles.stimFilename = pathTot;
+        stimtitles = fnames;
+        
+        %Sort the datatitles alphabetically (which is also chronologically if
+        %only one bird) and use the index to sort the datasetFilename as well
+        if iscell(stimtitles)
+            [handles.stimtitles, ind] = sort(stimtitles);
+            handles.stimFilename = handles.stimFilename(ind);
+        else
+            handles.stimtitles = stimtitles;
+            handles.stimFilename = handles.stimFilename;
+        end
+        
+        %Set the message to show datasets replaced
+        set(handles.listbox_stimParams,'String',handles.stimtitles)
+        set(handles.text_message,'String',['Added ' num2str(i) ' new stim files to the active list']);
+        
+    end
+end
+
+guidata(hObject, handles);
+
+function push_clearStims_Callback(hObject, eventdata, handles)
+%Get user confirmation on clearing the list
+button = questdlg('Are you sure you want to clear all stimulation files?','Clear stimData?','Yeah, fuck it.','Nooooo!','Nooooo!');
+
+if (strcmp(button,'Yeah, fuck it.'))
+    %Clear pointers to the datasets and their labels
+     handles.stimFilename = [];
+     handles.stimtitles = [];
+     
+    %Add here whatever other shit needs to be cleared from memory
+
+
+    %Set the message to show datasets replaced
+    set(handles.listbox_stimParams,'String',handles.stimtitles)
+    set(handles.text_message,'String','All stimulation files cleared.');
+else
+    set(handles.text_message,'String','Stimulation files are unchanged.');
+end
+
+guidata(hObject, handles);
+
+function push_load_Callback(hObject, eventdata, handles)
+%Load the data from the saved .dat and .wav files to the workspace
+if isempty(handles.datasetFilename)
+    set(handles.text_message,'String','No datasets found to load, Dipshit. Check list, add files and try again.')
+else
+    % %Talon output structure:
+    % filenames = filt_keys(handles.chosenStartSeq(:,1));
+    % filenums = filt_filenums(handles.chosenStartSeq(:,1));
+    % sequence = contents(get(handles.popup_seqSylls,'Value'),:);
+    %
+    % %Template Data
+    % data.templatesyllBreaks = handles.data.templatesyllBreaks;
+    % data.template = handles.data.template;
+    %
+    % %Alignment paths
+    % data.AlignType = get(handles.popup_alignType,'Value');
+    % data.p = handles.data.p;
+    % data.q = handles.data.q;
+    % data.pFull = handles.data.pFull;
+    % data.snipTimes = handles.data.snipTimes;
+    %
+    % %Audio Data
+    % audio.raw = handles.data.audio;
+    %
+    % %Neuro Data
+    % neuro.raw = handles.data.neuro;
+    % neuro.ref = handles.data.neuroRef;
+    % neuro.aligned = handles.data.neuroPower;
+    % neuro.aligned_abs = handles.data.neuroPower_abs;
+    %
+    % %Experiment Status
+    % data.drugsStatus = handles.data.drugsStatus;
+    % data.directStatus = handles.data.directStatus;
+    % data.flag = handles.data.flag;
+    
+    % Define/clear the persistent data structures
+    handles.data = [];
+    handles.proj = [];
+    handles.mask = [];
+    handles.data.filenames = [];
+    handles.data.filenums = [];
+    handles.data.audio = [];
+    handles.data.pFull = [];
+    handles.data.stimTTL = [];
+    handles.data.template = [];
+    handles.data.templatesyllBreaks = [];
+    handles.mask.flag = [];
+    
+    %Clear the data axes and indicators
+    clearStimAxes(handles);
+    cla(handles.axes_spec)
+    set(handles.push_load, 'BackgroundColor', [0.94, 0.94, 0.94])
+    
+    %Cycle through each dataset, load from file, extract needed info, and
+    %shuffle into data structures
+    if iscell(handles.datasetFilename)
+        numDatasets = numel(handles.datasetFilename);
+    else
+        numDatasets = 1;
+    end
+    h = waitbar(0,'Loading datasets and shuffling some stuff. Please wait...');
+    for i = 1:numDatasets
+        
+        %Load specific variables from file
+        loadVars = {'audio','neuro','data','filenames','filenums','sequence'};
+        if iscell(handles.datasetFilename)
+            load(handles.datasetFilename{i}, loadVars{:})
+        else
+            load(handles.datasetFilename, loadVars{:})
+        end
+        
+        %Parse the sequence data to strip out the rendition count
+        sp = regexp(sequence,' ','split');
+        seqCheck(i) = str2double(sp(1));
+        
+        %Copy out data to the handles structure
+        handles.data.filenames = [handles.data.filenames, filenames];
+        handles.data.filenums = [handles.data.filenums, filenums];
+        handles.data.audio = [handles.data.audio, audio.raw];
+        handles.data.pFull = [handles.data.pFull, data.pFull];
+        handles.data.stimTTL = [handles.data.stimTTL, neuro.raw];
+        handles.data.template = data.template;
+        handles.data.templatesyllBreaks = data.templatesyllBreaks;
+        handles.mask.flag = [logical(handles.mask.flag), data.flag'];
+        
+        %Clear out already processed data to free memory
+        clear(loadVars{:});
+        waitbar(i/numDatasets)
+    end
+    set(handles.text_message,'String','Dataset loading now completed.')
+    close(h)
+end
+
+%Check to make sure all of the sequences are the same
+if length(unique(seqCheck)) > 1
+    warndlg('Not all datasets appear to have the same syllable sequence. Likely problems ahead.');
+    return
+    uiwait;
+end
+
+%Process all audio timeseries for projections of interest
+handles.proj = extractProjections(handles.data.audio);
+
+%Create the stimulation logical index (stim == true)
+[handles.mask.stimIdx, handles.data.stimIdx] = createStimIdx(handles.data.stimTTL);
+
+%It's been avoided as long as possible... need to do something with the
+%stimulation parameters information
+
+
+%Plot the template for reference
+handles = plotReferenceTemplate(handles);
+
+% Change button color as status indicator
+set(handles.push_load, 'BackgroundColor', 'g')
+
+guidata(hObject, handles);
+
+function push_help_Callback(hObject, eventdata, handles)
+%Format the help message
+help_string=['Keyboard Shortcuts:' ...
+    sprintf('\n') 'comma(,) - zoom back' ...
+    sprintf('\n') 'period(.) - zoom forward' ...
+    sprintf('\n') 'delete - delete syllable' ...
+    sprintf('\n') 'm - delete pause'...
+    sprintf('\n') 'p - play sound' ...
+    sprintf('\n') 'space bar - jump to next syllable' ...
+    sprintf('\n') ...
+    sprintf('\n') 'Labeling Syllables:' ...
+    sprintf('\n') '1-10 - labels syllables 1-10' ...
+    sprintf('\n') 'u - unknown syllable' ...
+    sprintf('\n') 'c - call' ...
+    sprintf('\n') 'n - CAF noise+syllable' ...
+    sprintf('\n') 's - subsong' ...
+    sprintf('\n') ...
+    sprintf('\n') 'Segmenting Plot Guides:' ...
+    sprintf('\n') 'Red Vertical Lines - Syllable Edges'...
+    sprintf('\n') 'Solid Black Line - Bout Detection Threshold'...
+    sprintf('\n') 'Bold Colored Boxes - Detected Bouts'...
+    sprintf('\n') 'Dashed Colored Lines - Syllable Edge Threshold' ...
+    sprintf('\n') 'Dotted Colored Lines - Syllable Continuation Threshold'...
+    sprintf('\n') ...
+    sprintf('\n') 'Filelist Color Codes:' ...
+    sprintf('\n') 'Plain text - Unannotated File'...
+    sprintf('\n') 'Bold text w/ Green Highlight - Annotated File'...
+    sprintf('\n') 'Blue text w/ Green Highlight - Annotated File w/ Segmenting Error'...
+    sprintf('\n') 'Red text - File Errored During Batch Process'];
+
+%Display in a dialog box
+helpdlg(help_string,'Legend for plots and keyboard shortcuts');
+
+guidata(hObject, handles);
+
+function listbox_datasets_Callback(hObject, eventdata, handles)
+
+function listbox_datasets_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+function listbox_stimParams_Callback(hObject, eventdata, handles)
+
+function listbox_stimParams_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   Plotting controls
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function push_reproj_Callback(hObject, eventdata, handles)
+
+%Re-extract the projections
+handles.proj = extractProjections(handles.data.audio);
+
+guidata(hObject, handles);
+
+function push_plotIt_Callback(hObject, eventdata, handles)
+% Test alignment and plotting sequences
+
+
+%Point to align all renditions to (in ms)
+if get(handles.radio_alignEdge, 'Value')
+    %Delect existing marker (if it's there)
+    if isfield(handles, 'alignPointHandle')
+        pnt = handles.alignPoint;
+    else
+        set(handles.text_message, 'String', 'You need to select and alignment point before you can align to an edge.')
+        return
+    end
+else
+    
+end
+
+%Select the feature to be plotted
+feature = [];
+contents = {'envelp', 'AM', 'FM', 'entropy', 'pitchGood', 'pitchChose'};
+featPntr = get(handles.popup_feature, 'Value');
+eval(['feature = handles.proj.' contents{featPntr} ';'])
+if featPntr == 1
+    scaling = 44.1;
+else
+    scaling = 1;
+end
+
+%Calculate alignment timeseries
+[handles.align.t, tmin, tmax] = cellfun(@(x,y) align2timepoint(x, y, pnt, scaling), handles.data.pFull, feature, 'UniformOutput', 0); 
+tmin = cell2mat(tmin);
+tmax = cell2mat(tmax);
+
+%Assemble aligned data
+numRend = numel(tmin);
+mTime = min(tmin):max(tmax);
+alignedData = NaN(numRend, numel(mTime));
+
+for i = 1:numRend
+    ind = find(mTime == handles.align.t{i}(1));
+    feat = feature{i};
+    alignedData(i,ind:(ind+numel(feat)-1)) = feat;
+end
+
+%Setup mask
+[bStim, bNoStim] = generateMask(handles.mask);
+
+if get(handles.radio_plotDensity, 'Value')
+    %Generate density plots
+    minVal = min(alignedData(:));
+    maxVal = max(alignedData(:));
+    [stimDensity, ~] = createDensityImage(alignedData(bStim,:), minVal, maxVal);
+    [nostimDensity, ~] = createDensityImage(alignedData(bNoStim,:), minVal, maxVal);
+    
+    clearStimAxes(handles);
+    handles = plotDensityImages(handles, stimDensity, nostimDensity, minVal, maxVal, mTime(1), scaling);
+    
+else
+    %Generate rendition plots
+    [stimPlot, stimMean] = createRenditionSeries(alignedData(bStim,:), mTime);
+    [nostimPlot, nostimMean] = createRenditionSeries(alignedData(bNoStim,:), mTime);
+
+    clearStimAxes(handles);
+    handles = plotRenditionPlots(handles, stimPlot, stimMean, nostimPlot, nostimMean, mTime, scaling);
+
+end
+
+guidata(hObject, handles);
+
+function radio_plotDensity_Callback(hObject, eventdata, handles)
+if get(handles.radio_plotDensity, 'Value')
+    %Turn this button off
+    set(handles.radio_plotRends, 'Value', 0)
+else
+    %Turn this button on
+    set(handles.radio_plotDensity, 'Value', 1)
+    
+end
+
+guidata(hObject, handles);
+
+function radio_plotRends_Callback(hObject, eventdata, handles)
+if get(handles.radio_plotRends, 'Value')
+    %Turn this button off
+    set(handles.radio_plotDensity, 'Value', 0)
+else
+    %Turn this button on
+    set(handles.radio_plotRends, 'Value', 1)
+    
+end
+guidata(hObject, handles);
+
+
+function push_test3_Callback(hObject, eventdata, handles)
+
+set(handles.uitable_stimPatterns, 'RowName', 'numbered', 'ColumnName', {'Pattern', 'Phase 1', 'Inter', 'Phase 2', 'Reps', 'Freq'})
+
+guidata(hObject, handles);
+
+function check_1_Callback(hObject, eventdata, handles)
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   Alignment controls
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function radio_alignEdge_Callback(hObject, eventdata, handles)
+if get(handles.radio_alignEdge, 'Value')
+    %Turn this button off
+    set(handles.radio_alignTTL, 'Value', 0)
+else
+    %Turn this button on
+    set(handles.radio_alignEdge, 'Value', 1)
+    
+end
+
+guidata(hObject, handles);
+
+function radio_alignTTL_Callback(hObject, eventdata, handles)
+if get(handles.radio_alignTTL, 'Value')
+    %Turn this button off
+    set(handles.radio_alignEdge, 'Value', 0)
+else
+    %Turn this button on
+    set(handles.radio_alignTTL, 'Value', 1)
+    
+end
+
+guidata(hObject, handles);
+
+function edit_offset_Callback(hObject, eventdata, handles)
+
+function edit_offset_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   Export controls
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   Other Stuff
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function check_flags_Callback(hObject, eventdata, handles)
+
+
+function pushbutton18_Callback(hObject, eventdata, handles)
+
+function popup_feature_Callback(hObject, eventdata, handles)
+
+function popup_feature_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+function pushbutton11_Callback(hObject, eventdata, handles)
+
+function pushbutton12_Callback(hObject, eventdata, handles)
+
+function pushbutton13_Callback(hObject, eventdata, handles)
+
+function pushbutton14_Callback(hObject, eventdata, handles)
+
+function pushbutton15_Callback(hObject, eventdata, handles)
+
+function pushbutton16_Callback(hObject, eventdata, handles)
+
+function pushbutton17_Callback(hObject, eventdata, handles)
+
+
+% --- Executes when selected cell(s) is changed in uitable_stimPatterns.
+function uitable_stimPatterns_CellSelectionCallback(hObject, eventdata, handles)
+% hObject    handle to uitable_stimPatterns (see GCBO)
+% eventdata  structure with the following fields (see MATLAB.UI.CONTROL.TABLE)
+%	Indices: row and column indices of the cell(s) currently selecteds
+% handles    structure with handles and user data (see GUIDATA)

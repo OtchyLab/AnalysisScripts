@@ -1,0 +1,431 @@
+function searchPopulation
+% searchPopulation
+% written by TMO 06/11/2016; last modified 06/13/2016
+%
+% This script simulates the maturation of a model RA neuron (i.e., it
+% models changes in spiking as a function of HVC and local inhibition.
+% The code is based on the "RA_toy_model_lognormal_orig" script used in Garst-Orozco
+% et al 2015.
+
+%Generate unique simulation ID number
+simID = num2str(randi(10^5), '%05u');
+
+%Define the primary maturation vectors (tentative)
+[prune_vec, mean_vec, std_vec, ages, inh_vec, HVC_vec] = expVects;
+matureVecs.prune_vec = prune_vec;
+matureVecs.mean_vec = mean_vec;
+matureVecs.std_vec = std_vec;
+matureVecs.ages = ages;
+matureVecs.inh_vec = inh_vec;
+matureVecs.HVC_vec = HVC_vec;
+
+xlims = [ages(1)-5, ages(end)+5]; %get limits for later plotting
+
+%Plot the maturation vectors
+f0 = figure(1000); clf
+subplot(2,1,1)
+[hAx, hLine1, hLine2] = plotyy(ages, prune_vec, ages, mean_vec);
+ylabel(hAx(1), 'Pruning Fraction')
+ylabel(hAx(2), 'Synapse Weight')
+title('Maturation Vector Inputs')
+xlim(hAx(1), xlims); ylim(hAx(1), [0, 1])
+xlim(hAx(2), xlims); ylim(hAx(2), [0, 0.1])
+set(hAx(1), 'Box', 'off', 'TickDir', 'out', 'YTick', 0:0.2:1)
+set(hAx(2), 'Box', 'off', 'TickDir', 'out', 'YTick', 0:0.02:0.1)
+
+subplot(2,1,2)
+[hAx, hLine1, hLine2] = plotyy(ages, inh_vec, ages, HVC_vec);
+xlabel('Age (d)')
+ylabel(hAx(1), 'Inhibition Scale')
+ylabel(hAx(2), 'HVC ISI (ms)')
+xlim(hAx(1), [35, 210]); ylim(hAx(1), [0, 4])
+xlim(hAx(2), [35, 210]); ylim(hAx(2), [0, 8])
+set(hAx(1), 'Box', 'off', 'TickDir', 'out', 'YTick', 0:1:4)
+set(hAx(2), 'Box', 'off', 'TickDir', 'out', 'YTick', 0:2:8)
+
+set(gcf, 'Units', 'inches', 'Position', [1, 1, 4, 5])
+drawnow
+
+%Define the baseline vectors to assess the 'goodness' of the free parameter search
+[targetStats, targetRng, f1] = targetVectors(ages, simID);
+
+%Specify numHVC to search
+%numHVC = 4;
+numHVC = linspace(2, 20, 19);
+
+%Specify inh_HVC_ratio to search
+%inh_HVC_ratio = 200;
+inh_HVC_ratio = linspace(0, 1200, 13);
+
+%Number of RA neurons to simulate
+poolSize = 5;
+
+%Cycle through the strength of HVC input
+summary = [];
+D = nan(numel(numHVC), numel(inh_HVC_ratio));
+for i = 1:numel(numHVC)
+    
+    %Cycle through the strength of inhibition
+    for j = 1:numel(inh_HVC_ratio)
+        
+        %Cycle through the pool of neurons
+        spikeStats = []; params = [];
+        for k = 1:poolSize
+            %Call the simulation function
+            [s, p] = matureRA(numHVC(i), inh_HVC_ratio(j), matureVecs);
+            
+            %Log the output?
+            spikeStats = [spikeStats; s];
+            params = [params, p];
+            
+        end
+        
+        %Average over the neuron pool using these parameters
+        summary(i,j).ages = nanmean(getStructField(spikeStats, 'ages'),1);
+        summary(i,j).FR = nanmean(getStructField(spikeStats, 'FR'),1);
+        summary(i,j).BF = nanmean(getStructField(spikeStats, 'BF'),1);
+        summary(i,j).sparse = nanmean(getStructField(spikeStats, 'sparse'),1);
+        summary(i,j).spikeCorr = nanmean(getStructField(spikeStats, 'spikeCorr'),1);
+        
+        %Plot the trajectories (with constant numHVC) on a single axis
+        f2 = figure(i);
+        if j == 1
+            clf;
+        end
+        subplot(4,1,1); hold on
+        plot(summary(i,j).ages, summary(i,j).FR, 'DisplayName', ['inhHVC=' num2str(inh_HVC_ratio(j))])
+        xlim(xlims)
+        ylabel('Firing Rate (Hz)')
+        title([simID ' - SpikeTrain Stats for numHVC=' num2str(numHVC(i))])
+        set(gca, 'Box', 'off', 'TickDir', 'out')
+        
+        subplot(4,1,2); hold on
+        plot(summary(i,j).ages, summary(i,j).BF, 'DisplayName', ['inhHVC=' num2str(inh_HVC_ratio(j))])
+        xlim(xlims)
+        ylabel('Burst Fraction')
+        set(gca, 'Box', 'off', 'TickDir', 'out')
+        
+        subplot(4,1,3); hold on
+        plot(summary(i,j).ages, summary(i,j).sparse, 'DisplayName', ['inhHVC=' num2str(inh_HVC_ratio(j))])
+        xlim(xlims)
+        ylabel('Sparseness')
+        set(gca, 'Box', 'off', 'TickDir', 'out')
+        
+        subplot(4,1,4); hold on
+        plot(summary(i,j).ages, summary(i,j).spikeCorr, 'DisplayName', ['inhHVC=' num2str(inh_HVC_ratio(j))])
+        xlim(xlims)
+        ylabel('Correlation')
+        set(gca, 'Box', 'off', 'TickDir', 'out')
+        
+        set(gcf, 'Units', 'inches', 'Position', [1, 1, 5, 9])
+        drawnow
+        
+        %Take some sort of distance/goodness metric to assess outcome
+        D(i,j) = calcDistance(D, summary(i,j), targetStats, targetRng, simID);
+        
+        f3 = figure(1003); clf
+        imagesc(D); colormap(jet)
+        axis ij; axis square; axis tight
+        xlabel('inhHVC', 'FontSize', 13); ylabel('numHVC', 'FontSize', 13)
+        title('Distance Plot')
+        xticks = get(gca, 'XTick'); yticks = get(gca, 'YTick');
+        set(gca, 'Box', 'off', 'TickDir', 'out', 'XTickLabel', inh_HVC_ratio(xticks),...
+            'YTickLabel', numHVC(yticks), 'FontSize', 11, 'LineWidth', 1.5)
+        
+        set(gcf, 'Units', 'inches', 'Position', [3, 2, 5, 4])
+        drawnow
+    end
+    
+    %%%%%%%%%%%%%%%%%
+    %Incremental save
+    %%%%%%%%%%%%%%%%%
+    
+    %If it's the first time through, save the maturation input vector
+    saveFolder = '/Users/Tim/Desktop/Iso Paper Datasets/Modeling Figures/';
+    if i == 1
+        %Maturation Vectors
+        figName = ['PopSearch - ' simID ' - ' char(datetime) ' - Maturation Input Vectors.fig'];
+        savefig(f0, [saveFolder, figName])
+        
+        %Target Vectors
+        figName = ['PopSearch - ' simID ' - ' char(datetime) ' - Target Vectors.fig'];
+        savefig(f1, [saveFolder, figName])
+    end
+    
+    %Save the current spiketrain stats figure
+    figName = ['PopSearch - ' simID ' - ' char(datetime) ' - SpikeTrain Stats numHVC=' num2str(numHVC(i)) '.fig'];
+    savefig(f2, [saveFolder, figName])
+    
+    %Save the distance/goodness map
+    figName = ['PopSearch - ' simID ' - Distance.fig'];
+    savefig(f3, [saveFolder, figName])
+    
+    %Save data to file
+    fileName = ['PopSearch - ' simID ' - Simulation Data.mat'];
+    save([saveFolder, fileName], 'summary', 'numHVC', 'inh_HVC_ratio', 'matureVecs', 'targetStats', 'targetRng', 'simID', '-v7')
+    
+end
+
+function [prune_vec, mean_vec, std_vec, ages, inh_vec, HVC_vec] = expVects
+% Empirical data from JGO (TMO calculated on 5/31 -- these are the descriptive stats)
+%           T40       I40        T60       I60      T90       I90      T200      I200
+%sfMean = 29.5219   29.9044   49.6013   45.3759   73.6766   72.9715   79.1057   66.9595
+%sfStd  = 21.7046   20.1472   30.0967   30.4014   60.3826   72.7731   43.5912   57.0972
+%inEst  = 18.6754   18.1951   26.3587   30.8637   10.8243   37.1721   10.0262   23.1487
+
+%Steps in segments
+% s1 = 11; %2d spacing
+% s2 = 25; %2d spacing
+% s3 = 19; %5d spacing
+
+s1 = 6; %4d spacing
+s2 = 8; %4d spacing
+s3 = 12; %10d spacing
+
+%Linear scaling function for the pruning
+%The basic premise is that the value of rho should be proportional to the
+%extent of synapse pruning such that
+%
+%min inputs => rho==1   all synapses pruned
+%max inputs => rho==0   no synapses pruned
+% ((in_max-in_min)-# ins)/in_max
+in_max = 50;
+in_min = 0;
+
+%Sparse datapoints for d60, d110, and d200
+sp_ages = [42, 62, 90, 200];
+
+%Tutored
+sp_Mean = [30, 50, 75, 80]./1000;
+sp_Std  = [22, 30, 60, 44]./1000;
+sp_rawPrun = [18, 26.4, 10.8, 10];
+sp_HVC = [6, 4, 2, 2]; %age-dependent decrease in HVC ISI (ms)
+%sp_HVC = [2, 2, 2, 2]; %age-dependent decrease in HVC ISI (ms)
+%sp_inh = [1, 1, 0.625, 0.625]; % age-dependent inhibition based on Sakaguchi 1996
+sp_inh = [1, 1, 1, 1]; % age-dependent inhibition based on Olveczky 2011
+
+%Isolate
+% sp_Mean = [29.9, 45.4, 73, 67]./1000;
+% sp_Std  = [20.1, 30.4, 72.8, 57.1]./1000;
+%sp_rawPrun = [18, 31, 37, 23];
+% sp_inh = [1, 1, 0.625, 0.625]; % age-dependent inhibition based on Sakaguchi 1996
+
+sp_Prun = ((in_max-in_min)-sp_rawPrun)./in_max; %Linear scaling
+
+%Interpolate between points
+r1 = linspace(sp_ages(1), sp_ages(2), s1); r2 = linspace(sp_ages(2), sp_ages(3), s2); r3 = linspace(sp_ages(3), sp_ages(4), s3);
+ages = [r1, r2(2:end), r3(2:end)];
+
+r1 = linspace(sp_Mean(1), sp_Mean(2), s1); r2 = linspace(sp_Mean(2), sp_Mean(3), s2); r3 = linspace(sp_Mean(3), sp_Mean(4), s3);
+mean_vec = [r1, r2(2:end), r3(2:end)];
+
+r1 = linspace(sp_Std(1), sp_Std(2), s1); r2 = linspace(sp_Std(2), sp_Std(3), s2); r3 = linspace(sp_Std(3), sp_Std(4), s3);
+std_vec = [r1, r2(2:end), r3(2:end)];
+
+r1 = linspace(sp_Prun(1), sp_Prun(2), s1); r2 = linspace(sp_Prun(2), sp_Prun(3), s2); r3 = linspace(sp_Prun(3), sp_Prun(4), s3);
+prune_vec = [r1, r2(2:end), r3(2:end)];
+
+r1 = linspace(sp_inh(1), sp_inh(2), s1); r2 = linspace(sp_inh(2), sp_inh(3), s2); r3 = linspace(sp_inh(3), sp_inh(4), s3);
+inh_vec = [r1, r2(2:end), r3(2:end)];
+
+r1 = linspace(sp_HVC(1), sp_HVC(2), s1); r2 = linspace(sp_HVC(2), sp_HVC(3), s2); r3 = linspace(sp_HVC(3), sp_HVC(4), s3);
+HVC_vec = [r1, r2(2:end), r3(2:end)];
+
+function [sc_stats, ranges, f] = targetVectors(long_ages, simID)
+% Empirical data from in vivo recordings (TMO calculated on 6/16 -- these are the descriptive stats)
+%           T50       I50        T60       I60      T90       I90      T200      I200
+%FR       = 43.5      38.3       47        38       75.9      56.3     75.7      59.4
+%BF       = 0.48      0.40       0.68      0.42     0.84      0.54     0.97      0.66
+%sparse   = 0.056     0.082      0.16      0.096    0.20      0.11     0.23      0.12
+%spikeCorr= 0.13      0.18       0.69      0.24     0.80      0.36     0.85      0.57
+
+%Binary switch for tutored and isolate target vextors
+tutored = true;
+
+%Ages
+ages = [50, 60, 90, 200];
+
+%Empirical spiking statistics
+if tutored
+    %Tutored stats
+    FR = [43.5, 47, 75.9, 75.7];
+    BF = [0.48, 0.68, 0.84, 0.97];
+    sparse = [0.056, 0.16, 0.20, 0.23];
+    spikeCorr = [0.13, 0.69, 0.80, 0.85];
+    
+else
+    %Isolate stats
+    
+    
+end
+
+%Scale stats
+[sc_FR, rng_FR] = scaleStat(FR, 0);
+[sc_BF, rng_BF] = scaleStat(BF, 1);
+[sc_sparse, rng_sparse] = scaleStat(sparse, 1);
+[sc_spikeCorr, rng_spikeCorr] = scaleStat(spikeCorr, 1);
+
+%Assemble in matrices for output
+sc_stats = [interp1(ages, sc_FR, long_ages, 'pchip', 'extrap');...
+    interp1(ages, sc_BF, long_ages, 'pchip', 'extrap');...
+    interp1(ages, sc_sparse, long_ages, 'pchip', 'extrap');...
+    interp1(ages, sc_spikeCorr, long_ages, 'pchip', 'extrap')];
+
+ranges = [rng_FR; rng_BF; rng_sparse; rng_spikeCorr];
+
+%Plot the results
+f = figure(1001); clf
+subplot(4,1,1); hold on
+plot(long_ages, sc_stats(1,:))
+xlims = [long_ages(1)-5, long_ages(end)+5];
+xlim(xlims); ylim([0,1])
+ylabel('Firing Rate')
+title([simID ' - Target SpikeTrain Stats'])
+set(gca, 'Box', 'off', 'TickDir', 'out')
+
+subplot(4,1,2); hold on
+plot(long_ages, sc_stats(2,:))
+xlim(xlims); ylim([0,1])
+ylabel('Burst Fraction')
+set(gca, 'Box', 'off', 'TickDir', 'out')
+
+subplot(4,1,3); hold on
+plot(long_ages, sc_stats(3,:))
+xlim(xlims); ylim([0,1])
+ylabel('Sparseness')
+set(gca, 'Box', 'off', 'TickDir', 'out')
+
+subplot(4,1,4); hold on
+plot(long_ages, sc_stats(4,:))
+xlim(xlims); ylim([0,1])
+xlabel('Age (d)')
+ylabel('Correlation')
+set(gca, 'Box', 'off', 'TickDir', 'out')
+
+set(gcf, 'Units', 'inches', 'Position', [1, 1, 5, 9])
+drawnow
+
+function D = calcDistance(Din, summary, targetStats, targetRng, simID)
+%Calulcate the euclidean distance between the current simulation data
+%(summary) and the target stats.
+
+%Switch for plotting
+plotIt = true;
+
+%Strip data
+long_ages = summary.ages;
+
+%Scale the current data to match target
+simStats = [];
+[simStats(1,:), ~] = scaleStat(summary.FR, 0, targetRng(1,:));
+[simStats(2,:), ~] = scaleStat(summary.BF, 0, targetRng(2,:));
+[simStats(3,:), ~] = scaleStat(summary.sparse, 0, targetRng(3,:));
+[simStats(4,:), ~] = scaleStat(summary.spikeCorr, 0, targetRng(4,:));
+simStats(isnan(simStats)) = 0;
+
+%Calculate the euclidean distance betwen simulation and target
+Dmat = pdist2(simStats', targetStats');
+
+%Report the summed distance along the diagonal
+D = sum(diag(Dmat));
+
+%Plot output for inspection
+if plotIt
+    figure(500); clf
+    subplot(4,1,1);
+    plot(long_ages, targetStats(1,:), 'k'); hold on
+    plot(long_ages, simStats(1,:), 'r');
+    xlims = [long_ages(1)-5, long_ages(end)+5];
+    xlim(xlims); ylim([0,1])
+    ylabel('Firing Rate')
+    title([simID ' - Target and Sim SpikeTrain Stats'])
+    set(gca, 'Box', 'off', 'TickDir', 'out')
+    
+    subplot(4,1,2);
+    plot(long_ages, targetStats(2,:), 'k'); hold on
+    plot(long_ages, simStats(2,:), 'r');
+    xlim(xlims); ylim([0,1])
+    ylabel('Burst Fraction')
+    set(gca, 'Box', 'off', 'TickDir', 'out')
+    
+    subplot(4,1,3);
+    plot(long_ages, targetStats(3,:), 'k'); hold on
+    plot(long_ages, simStats(3,:), 'r');
+    xlim(xlims); ylim([0,1])
+    ylabel('Sparseness')
+    set(gca, 'Box', 'off', 'TickDir', 'out')
+    
+    subplot(4,1,4);
+    plot(long_ages, targetStats(4,:), 'k'); hold on
+    plot(long_ages, simStats(4,:), 'r');
+    xlim(xlims); ylim([0,1])
+    xlabel('Age (d)')
+    ylabel('Correlation')
+    set(gca, 'Box', 'off', 'TickDir', 'out')
+    
+    set(gcf, 'Units', 'inches', 'Position', [5, 2, 5, 9])
+    drawnow
+end
+
+%Retain output if it's the best fit yet found
+Dtemp = Din(~isnan(Din));
+if D < min(Dtemp)
+    figure(555); clf
+    subplot(4,1,1);
+    plot(long_ages, targetStats(1,:), 'k'); hold on
+    plot(long_ages, simStats(1,:), 'r');
+    xlims = [long_ages(1)-5, long_ages(end)+5];
+    xlim(xlims); ylim([0,1])
+    ylabel('Firing Rate')
+    title([simID ' Best Match Found'])
+    set(gca, 'Box', 'off', 'TickDir', 'out')
+    
+    subplot(4,1,2);
+    plot(long_ages, targetStats(2,:), 'k'); hold on
+    plot(long_ages, simStats(2,:), 'r');
+    xlim(xlims); ylim([0,1])
+    ylabel('Burst Fraction')
+    set(gca, 'Box', 'off', 'TickDir', 'out')
+    
+    subplot(4,1,3);
+    plot(long_ages, targetStats(3,:), 'k'); hold on
+    plot(long_ages, simStats(3,:), 'r');
+    xlim(xlims); ylim([0,1])
+    ylabel('Sparseness')
+    set(gca, 'Box', 'off', 'TickDir', 'out')
+    
+    subplot(4,1,4);
+    plot(long_ages, targetStats(4,:), 'k'); hold on
+    plot(long_ages, simStats(4,:), 'r');
+    xlim(xlims); ylim([0,1])
+    xlabel('Age (d)')
+    ylabel('Correlation')
+    set(gca, 'Box', 'off', 'TickDir', 'out')
+    
+    set(gcf, 'Units', 'inches', 'Position', [5, 2, 5, 9])
+    drawnow
+
+end
+
+
+function [out, rnge] = scaleStat(in, clamp, rnge)
+%Helper function
+if nargin < 3
+    %Uniformly scale the input structure
+    offset = range(in)/2;
+    rnge = [min(in)-offset, max(in)+offset];
+end
+
+%Clamp the range if specified
+if clamp
+    rnge(1) = max([0, rnge(1)]);
+    rnge(2) = min([1, rnge(2)]);
+end
+
+%Interpolate to scale
+out = interp1(rnge, [0,1], in);
+
+
+
+
+

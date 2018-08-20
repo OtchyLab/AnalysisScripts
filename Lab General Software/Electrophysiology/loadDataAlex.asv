@@ -1,0 +1,12 @@
+function data=loadDataAlex(rec,channel)
+
+filedir='C:\Documents and Settings\emberbence\My Documents\Experiments\Tims data\bencedata\2005-07-19';
+if (rec<10)
+    fill='000';
+elseif (rec<100)
+    fill='00';
+else
+    fill='0';
+end
+filename=['adult_0714D-f' fill num2str(rec) '.daq']; 
+end

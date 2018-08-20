@@ -1,0 +1,118 @@
+function [output,params] = simpleAnal(data,HP,LP)
+%Takes a matrix of raw neural recordings and creates
+no_motifs = length(data);
+
+fNormLP = [LP/(44100/2)];
+fNormHP = [HP/(44100/2)];
+
+[bLP,aLP] = butter(10, fNormLP, 'low');
+[bHP,aHP] = butter(10, fNormHP, 'high');
+
+params.fpass=[HP LP]; % frequency of interest
+params.err=[1 0.05];
+params.tapers=[3 5]; % tapers
+params.trialave=0; % trial averages?
+params.Fs=44100; % sampling frequency
+movingwin=[0.01 0.001]; % FFT window size/ overlap
+totRect =[];
+totSq=[];
+totSpec=[];
+buff=[];
+counter=1;
+
+for i=1:no_motifs
+    if ~isempty(data{i});
+        buff(counter,:)=data{i};
+        counter=counter+1;
+    end
+end
+data=[];
+data=buff;
+HP = filtfilt(bHP, aHP, data');
+BP = filtfilt(bLP, aLP, HP);
+Rect = abs(BP');
+Sq = (BP').^2;
+[S,t,f,R]=mtspecgramc(BP,movingwin,params);
+sumS = sum(S,2);
+
+figure(115);
+subplot(4,1,1);plot_matrix(S(:,:,1),t,f,'l');hold on
+
+
+for i=1:size(BP,2)
+    totRect(i,:) = smooth(Rect(i,:),2205,'sgolay',4);
+    totSq(i,:) = smooth(Sq(i,:),2205,'sgolay',4);
+    totSpec(i,:) = smooth(sumS(:,:,i),10,'sgolay',4);
+    subplot(4,1,4);plot(10*log10(sumS(:,:,i)));;hold on
+end
+
+subplot(4,1,2);plot(totRect','b');hold on
+subplot(4,1,3);plot(totSq','b');hold on
+
+%          figure(116);
+%          plot_matrix(S,t,f,'l')
+%          hold off
+%          pause(1)
+
+
+[n,m]=size(totRect);
+[o,p]=size(totSpec);
+avRect=sum(totRect)./n;
+avSq=sum(totSq)./n;
+avSpec=sum((totSpec))./o;
+figure(115);
+subplot(4,1,2);plot(avRect,'r');hold off
+subplot(4,1,3);plot(avSq,'r');hold off
+subplot(4,1,4);plot(10*log10(avSpec),'r');hold off
+
+%This is the section of code that displays the spikes/waveforms
+ColorDepth = 255;
+Rectmax = max(max(totRect));
+Rectmin = min(min(totRect));
+Sqmax = max(max(totSq));
+Sqmin = min(min(totSq));
+Specmax = max(max(totSpec));
+Specmin = min(min(totSpec));
+
+Rectspread = Rectmax-Rectmin;
+Sqspread = Sqmax-Sqmin;
+Specspread = Specmax-Specmin;
+        
+%Preallocate the mem space for the image
+RectAttributeImage = zeros(n,m); 
+SqAttributeImage = zeros(n,m); 
+SpecAttributeImage = zeros(o,p); 
+j = 1:n; %To vectorize scaling calculation
+StartPos(j) = 1*(j-1)+1; %Vertical start position for the AttribImage
+
+%Extract the feature attributes
+for i=1:n
+    Scaled = round((ColorDepth*(totRect(i,:))-Rectmin)./Rectspread); %Scale RMS by ColorDepth
+    RectAttributeImage(StartPos(i),:) = Scaled; %Insert scaled values along the vertical dimension
+    Scaled = round((ColorDepth*(totSq(i,:))-Sqmin)./Sqspread); %Scale RMS by ColorDepth
+    SqAttributeImage(StartPos(i),:) = Scaled; %Insert scaled values along the vertical dimension
+    Scaled = round((ColorDepth*(totSpec(i,:))-Specmin)./Specspread); %Scale RMS by ColorDepth
+    SpecAttributeImage(StartPos(i),:) = Scaled; %Insert scaled values along the vertical dimension
+end  
+ 
+figure(117); 
+imagesc(RectAttributeImage,[0 ColorDepth]); colormap(jet);
+figure(118);
+imagesc(SqAttributeImage,[0 ColorDepth]); colormap(jet);
+figure(119);
+imagesc(SpecAttributeImage,[0 ColorDepth]); colormap(jet);
+
+
+%Everything to output structure
+output.BP = BP;
+output.S = S;
+output.t = t;
+output.f = f;
+output.totRect = totRect';
+output.totSpec = totSpec';
+output.totSq = totSq';
+output.avRect=avRect;
+output.avSq=avSq;
+output.avSpec=avSpec;
+
+end

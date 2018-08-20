@@ -1,0 +1,16 @@
+if directed
+    songtype_prefix='D';
+else
+    songtype_prefix='U';
+end
+fnames=get_fnames(savepath,birdname,dirname,songtype_prefix,'',5000);
+if length(fnames)>0
+    namehelp=char(fnames{end}(1:end-4));
+    namehelp=NextName(namehelp);
+    filecount=namehelp(end-3:end);
+else
+    filecount='0001';
+end
+set(hDirected,'Value',directed);
+set(hUndirected,'Value',~directed);
+set(hFilecount,'string',namehelp(end-3:end));

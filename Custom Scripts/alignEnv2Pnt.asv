@@ -1,0 +1,114 @@
+function alignEnv2Pnt(TalonStruct, stimIdx)
+
+if nargin < 2
+    stimIdx = [];
+end
+
+%Convenience
+ts = TalonStruct;
+
+%Setup the figure
+figure(12); cla;
+
+%Point to align all renditions to (in ms)
+pnt = 437;
+t = [];
+
+%Audio Filter constant
+HP_fNorm = 300/(44150/2);
+LP_fNorm = 8000/(44150/2);
+[BP_b,BP_a] = butter(4,[HP_fNorm LP_fNorm]);
+
+numRend = numel(ts.filenames);
+for i = 1:numRend
+    %Retrieve path
+    path = ts.data.pFull{i};
+
+    %Lookup points
+    ind = find(path(:,1)==pnt);
+    warpedOut = round(mean(path(ind,2)));
+    
+    %Transform into samples
+    sampPnt(i) = round(44.1*warpedOut);
+    
+    %Generate time vector
+    t{i} = (1:numel(ts.audio.raw{i})) - sampPnt(i);
+    
+    %Generate audio envelop
+    filt_audio = filtfilt(BP_b, BP_a, (ts.audio.raw{i}-mean(ts.audio.raw{i})));
+    audioEnv{i} = smooth(filt_audio.^2, 220);
+  
+    plot(t{i}, audioEnv{i}); hold on
+    
+end
+
+%Format the figure
+ts = -600:150:300;
+set(gca, 'Box', 'off', 'TickDir', 'out')
+set(gca, 'XTick', 44.150*ts, 'XTickLabel', ts)
+
+xlabel(['Time(ms)'])
+ylabel(['Sound Envelop (V^2)'])
+set(gcf,'Units', 'Inches', 'Position', [1,1,6,4])
+
+minT = inf; maxT = -inf;
+for i = 1:numRend
+    minT = min([minT, min(t{i})]);
+    maxT = max([maxT, max(t{i})]);
+end
+mTime = minT:maxT;
+output = NaN(numRend, numel(mTime));
+
+for i = 1:numRend
+    ind = find(mTime == t{i}(1));
+    output(i,ind:(ind+numel(audioEnv{i})-1)) = audioEnv{i};
+end
+mTrace = nanmean(output,1);
+sTrace = nanstd(output, 1, 1);
+
+plot(mTime, mTrace, 'k', 'LineWidth', 2)
+
+%Plot separately by stim condition
+if ~isempty(stimIdx)
+
+    %Setup and plot the figure
+    figure(68); cla
+    for i = 1:numRend
+        if stimIdx(i) == false
+            subplot(2,1,1)
+            plot(t{i}, audioEnv{i}); hold on
+        else
+            subplot(2,1,2)
+            plot(t{i}, audioEnv{i}); hold on
+        end
+    end
+    
+    meanStim = nanmean(output(stimIdx,:)
+    
+    
+    
+    
+end
+
+%Format the figure
+subplot(2,1,1)
+ts = -600:50:300;
+set(gca, 'Box', 'off', 'TickDir', 'out')
+set(gca, 'XTick', 44.150*ts, 'XTickLabel', ts)
+xlim([-1000, 4000]); ylim([0, 0.025])
+xlabel([''])
+ylabel(['Sound Envelop (V^2)'])
+
+subplot(2,1,2)
+set(gca, 'Box', 'off', 'TickDir', 'out')
+set(gca, 'XTick', 44.150*ts, 'XTickLabel', ts)
+xlim([-1000, 4000]); ylim([0, 0.025])
+xlabel(['Time(ms)'])
+ylabel(['Sound Envelop (V^2)'])
+
+set(gcf,'Units', 'Inches', 'Position', [1,1,6,4])
+
+
+
+
+

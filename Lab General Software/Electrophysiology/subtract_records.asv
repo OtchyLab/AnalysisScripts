@@ -1,0 +1,6 @@
+function newcellfile=subtract_records(cellfile,from,to)
+%from and to are inclusive records. these will also be deleted
+newcellfile.spikes=[cellfile.spikes(1:from-1,:) cellfile.spikes(to+1:end,:)];
+presentCell.syll=presentCell.syll(1:164,:);
+presentCell.motif=presentCell.motif(1:164,:);
+presentCell.rec=presentCell.rec(1:164);
