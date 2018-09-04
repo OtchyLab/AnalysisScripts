@@ -3,10 +3,10 @@
 %Plotting all trials of a current steering trial
 
 %Ask user which file to load; check for suffix
-% clear
-% [filename, pathname, filterindex] = uigetfile('C:\Users\Tim\Desktop\LLR32\*.mat', 'Pick a file to view', 'MultiSelect', 'off');
-% load([pathname, filename]);
-% dataBlock = data;
+clear
+[filename, pathname, filterindex] = uigetfile('C:\Users\Tim\Desktop\LLR32\*.mat', 'Pick a file to view', 'MultiSelect', 'off');
+load([pathname, filename]);
+dataBlock = data;
 
 %Plotting sepoarately all trials of a single sTDT recording
 trials = size(dataBlock.tdt.response, 1);

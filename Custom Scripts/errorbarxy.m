@@ -47,11 +47,11 @@ function [varargout]=errorbarxy(varargin)
 %                Vertical bar, V bar lower cap, V bar upper cap]
 %
 %   For example
-%       x = 1:10;
-%       xe = 0.5*ones(size(x));
-%       y = sin(x);
-%       ye = std(y)*ones(size(x));
-%       H=errorbarxy(x,y,xe,ye,{'ko-', 'b', 'r'});
+      x = 1:10;
+      xe = 0.5*ones(size(x));
+      y = sin(x);
+      ye = std(y)*ones(size(x));
+      H=errorbarxy(x,y,xe,ye,{'ko-', 'b', 'r'});
 %    draws symmetric error bars on both x and y axes.
 %
 %   NOTE: errorbars are excluded from legend display. If you need to
