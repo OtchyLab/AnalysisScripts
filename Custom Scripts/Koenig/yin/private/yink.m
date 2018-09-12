@@ -3,9 +3,9 @@ function r=yink(p,fileinfo)
 % new version (feb 2003)
 %
 %
-
 %global jj;
 %jj=0;
+
 % process signal a chunk at a time
 idx=p.range(1)-1;
 totalhops=round((p.range(2)-p.range(1)+1) / p.hop);
@@ -36,7 +36,6 @@ r.r3=r3; % fine aperiodicity measure
 r.r4=r4; % power
 sf_cleanup(fileinfo);
 % end of program
-
 
 
 % Estimate F0 of a chunk of signal
@@ -71,10 +70,11 @@ else
 	error (['unexpected shift flag: ', num2str(p.shift)]);
 end
 rdiff_inplace(x,x,dd,lags,p.hop);
+
 rsum_inplace(dd,round(p.wsize/p.hop));
 dd=dd';
 [dd,ddx]=minparabolic(dd); 	% parabolic interpolation near min
-cumnorm_inplace(dd);		% cumulative mean-normalize
+cumnorm_inplace(dd);;		% cumulative mean-normalize
 
 % first period estimate
 %global jj;

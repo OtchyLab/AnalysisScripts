@@ -56,23 +56,27 @@ if strcmp(i.format, 'AU')
 		disp(['WARNING: matlab function AUREAD requires '...
 		'.au or .snd suffix on file name: ' i.fname]);
 	end
-	sz = auread(i.fname, 'size');
+%	sz = auread(i.fname, 'size');
+    [x,sr]=audioread(i.fname); sz=size(x);
 	i.nsamples=sz(1);
 	i.nchans=sz(2);
 	i.totalsamples = i.nsamples*i.nchans;
-	[dummy, i.sr, i.samplebits] = auread(i.fname, 1);
+    i.sr=sr;
+	%[dummy, i.sr, i.samplebits] = auread(i.fname, 1);
 	return;
 end
 if strcmp(i.format, 'WAV')
 	if isempty(findstr('.wav', i.fname)) & isempty(findstr('.WAV', i.fname))
-		disp(['WARNING: matlab function WAVREAD requires '...
+		disp(['WARNING: expected '...
 		'.wav suffix on file name: ' i.fname]);
 	end
-	sz = wavread(i.fname, 'size');
+	%sz = wavread(i.fname, 'size');
+    [x,sr]=audioread(i.fname); sz=size(x);
 	i.nsamples=sz(1);
 	i.nchans=sz(2);
 	i.totalsamples = i.nsamples*i.nchans;
-	[dummy, i.sr, i.samplebits] = wavread(i.fname, 1);
+	%[dummy, i.sr, i.samplebits] = wavread(i.fname, 1);
+    i.sr=sr;
 	return;
 end
 if strcmp(i.format, 'MACSND')

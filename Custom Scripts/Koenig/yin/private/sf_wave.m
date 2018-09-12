@@ -65,12 +65,14 @@ end
 
 % use matlab functions for AU and WAV and MACSND
 if strcmp(i.format, 'AU')
-	y=auread(i.fname, [samples(1) samples(2)]);
+%	y=auread(i.fname, [samples(1) samples(2)]);
+	y=audioread(i.fname, [samples(1) samples(2)]);
     y=y(:,chans(1):chans(2));
 	return;
 end
 if strcmp(i.format, 'WAV')
-	y=wavread(i.fname, [samples(1) samples(2)]); 
+%	y=wavread(i.fname, [samples(1) samples(2)]); 
+	y=audioread(i.fname, [samples(1) samples(2)]); 
     y=y(:,chans(1):chans(2));
 	return;
 end
