@@ -27,8 +27,8 @@ gain = 10;
 win = 220;
 step = 44;
 nfft = 512;
-preT = 100; %amount of sound before the stim marker to snip (in ms)
-durT = 105; %amount of sound after the stim marker to snip (in ms)
+preT = 95; %amount of sound before the stim marker to snip (in ms)
+durT = 110; %amount of sound after the stim marker to snip (in ms)
 
 %Constants for Bandpass Audio
 HP_fNorm = HP/(fs/2);

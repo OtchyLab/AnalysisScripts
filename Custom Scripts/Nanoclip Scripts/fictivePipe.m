@@ -338,6 +338,8 @@ for i = 1:size(snipsCube,1)
 %     S = featureBuilder(snipsCube(i,:));
 %     S = S(:,50:250);
 %     S = S(:,100:200);
+    padmat = gaussPad(S);
+    S = [S;padmat];
     
     %Add to the PCA list
     snipSet = [snipSet, S];
@@ -345,7 +347,7 @@ end
 
 %Perform tSNE embedding
 rng('default') % for reproducibility
-Y = tsne(snipSet','Algorithm','barneshut', 'Distance', 'euclidean', 'NumDimensions', 2);
+Y = tsne(snipSet','Algorithm','barneshut', 'Distance', 'correlation', 'NumDimensions', 2);
 % figure; scatter(Y(:,1),Y(:,2))
 
 %Unwrap the embedding matrix into syllable snips again
@@ -363,8 +365,8 @@ colors = [t; rand(23,3)]; %30 initial plotting colors to work with
 patternTypes = unique(patternList);
 
 %This is a plot
-figure(50); clf
-for i = 1
+figure(40); clf
+for i = 1:numel(patternTypes)
     %Determine which indices are for a given pattern
     idx = find(patternList==patternTypes(i));
 
@@ -373,13 +375,21 @@ for i = 1
         plot(squeeze(featCube(j,1,:)), squeeze(featCube(j,2,:)), 'Marker', '.', 'Color', colors(i,:)); hold on
     end
 end
-for i =1:3
-    subplot(3,1,i)
-    ys = ylim;
-    line([0, 0], ys, 'Color', 'r', 'LineStyle', ':');
+
+%This is a plot
+figure(41); clf
+for i = 1:numel(patternTypes)
+    %Determine which indices are for a given pattern
+    idx = find(patternList==patternTypes(i));
+
+     %Plot each timeseries in lowD space
+    for j = idx'
+        d1 = smooth(squeeze(featCube(j,1,:))', 9, 'moving')';
+        d2 = smooth(squeeze(featCube(j,2,:))', 9, 'moving')';
+        
+        plot(d1, d2, 'Marker', '.', 'Color', colors(i,:)); hold on
+    end
 end
-
-
 
 
 
