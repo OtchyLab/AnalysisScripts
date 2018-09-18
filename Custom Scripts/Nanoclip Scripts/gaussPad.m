@@ -7,15 +7,16 @@ function padmat = gaussPad(mat)
 
 bDebug = false;
 
-%Gaussian kernal definition
-width = 11; %gaussian width in units of the input matrix (for specs, this is typically ms)
-kern = gausswin(width);
-
 %Size of input matrix
 [~, n] = size(mat);
 
+%Gaussian kernal definition
+width = 2*n; %gaussian width in units of the input matrix (for specs, this is typically ms)
+kern = gausswin(width);
+
+
 %Create impulse matrix marking number and timing of gaussians
-step = 9; %gaussian spacing in units of the input matrix (for specs, this is typically ms)
+step = 7; %gaussian spacing in units of the input matrix (for specs, this is typically ms)
 wing = floor(step/2);
 numGs = floor(n/step);
 Imat = zeros(numGs, n);

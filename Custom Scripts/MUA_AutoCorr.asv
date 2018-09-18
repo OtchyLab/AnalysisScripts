@@ -71,7 +71,7 @@ a = 1;
 
 %%
 
-file = dir('*1.mat');
+file = dir('*4.mat');
 traces = [];
 figure(10000); clf
 for i = 1:numel(file)
@@ -86,27 +86,15 @@ axis tight; %ylim([0, 0.5])
 xlabel('Time (ms)'); ylabel('V^2 (mv^2)')
 set(gca, 'Box', 'off', 'TickDir', 'out')
 
-
-for i = 1:numel(file)
+rho(1) = 1;
+for i = 2:numel(file)
     rho(i) = corr(traces(1,:)', traces(i,:)');
 
-    mAmp(i) = mean(traces(i,:));
 
 end
-%%
 figure(10001); clf
-subplot(1,2,1)
-xs = [1, 5, 10, 15];
-plot(xs, rho, '-ok', 'LineWidth', 2)
-xlim([0,16]); ylim([0,1])
-xlabel('Time (DPI)'); ylabel('R^2')
-set(gca, 'Box', 'off', 'TickDir', 'out')
+plot(rho, 'ok', 'LineWidth', 2)
 
-subplot(1,2,2)
-plot(xs, mAmp, '-ok', 'LineWidth', 2)
-xlim([0,16]); ylim([0,0.2])
-xlabel('Time (DPI)'); ylabel('Mean V^2')
-set(gca, 'Box', 'off', 'TickDir', 'out')
 
 
 
