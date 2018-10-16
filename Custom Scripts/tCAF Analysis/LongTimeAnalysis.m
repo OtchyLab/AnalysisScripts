@@ -33,31 +33,31 @@ mother = 'C:\Users\Tim\Desktop';
 % out.file = 'LW58_0606-0719_intervals.mat'; %<=== Update this to load different file
 % out.batch = 'Control';
 % days(1) = 6;% Baseline day 1
-% days(2) = 12;% Peak drive 1
+% days(2) = 13;% Peak drive 1
 % days(3) = 17;% Return to baseline 1
-% days(4) = 21;% Baseline day 2
+% days(4) = 22;% Baseline day 2
 % days(5) = 27;% Peak drive 2
-% days(6) = 28;% Spontaneous return day
+% days(6) = 29;% Spontaneous return day
 
 % %Pointer to which days and files to extract (LW58 ChABC)
 % out.file = 'LW58_0801-0919_intervals.mat'; %<=== Update this to load different file
 % out.batch = 'ChABC';
-% days(1) = 2;% Baseline day 1
+% days(1) = 3;% Baseline day 1
 % days(2) = 4;% Peak drive 1
 % days(3) = 7;% Return to baseline 1
-% days(4) = 8;% Baseline day 2
+% days(4) = 9;% Baseline day 2
 % days(5) = 10;% Peak drive 2
 % days(6) = 12;% Spontaneous return day
 
 %Pointer to which days and files to extract (LY80 Control)
 out.file = 'LY80_0606-0719_intervals.mat'; %<=== Update this to load different file
 out.batch = 'Control';
-days(1) = 6;% Baseline day 1
-days(2) = 12;% Peak drive 1
-days(3) = 17;% Return to baseline 1
-days(4) = 20;% Baseline day 2
-days(5) = 25;% Peak drive 2
-days(6) = 31;% Spontaneous return day
+days(1) = 2;% Baseline day 1
+days(2) = 6;% Peak drive 1
+days(3) = 12;% Return to baseline 1
+days(4) = 22;% Baseline day 2
+days(5) = 26;% Peak drive 2
+days(6) = 34;% Spontaneous return day
 
 %Load the intervals file (from Metermeter2 output)
 fLoc = [mother, filesep, out.file];
@@ -66,17 +66,17 @@ load(fLoc, 'pData');
 %% Plot long time series of syllable durations
 
 %Bird specific details
-% %LW60
-% numInts = 3;
-% ints = [1,2; 3,4; 5,nan];
-
-% %LW58
-% numInts = 4;
-% ints = [1,2; 3,4; 5,6; 7,nan];
-
-%LY80
-numInts = 3;
-ints = [1,2; 3,4; 5,nan];
+if size(pData(1).intervals, 2) == 5
+    % %LW60 & LY80
+        numInts = 3;
+    ints = [1,2; 3,4; 5,nan];
+elseif size(pData(1).intervals, 2) == 7
+    % %LW58
+    numInts = 4;
+    ints = [1,2; 3,4; 5,6; 7,nan];
+else
+    return
+end
 
 %How many days in this dataset
 numDays = numel(pData);
@@ -154,17 +154,21 @@ out.stds_reduced = stds(days,:);
 out.diff_reduced = diffs(days,:);
 
 %Get the quantities to plot
-out.deltas = diff(out.diff_reduced,1);
+% out.deltas = diff(out.diff_reduced,1);
+out.deltas = diff(out.means_reduced,1);
 out.driveLength = diff(date(days));
 out.shiftRate = out.deltas./out.driveLength';
 
 %Group
-out.tStretch = out.deltas([1,4],2);
-out.ntStretch = out.deltas([1,4],[1,3]);
-out.rateUp = out.shiftRate([1,4],2);
-out.rateDown = out.shiftRate(2,2);
-out.rateSpont = out.shiftRate(5,2);
+m = false(size(out.shiftRate, 2),1);
+m(end-1) = true;
+out.tStretch = out.deltas([1,4],m);
+out.ntStretch = out.deltas([1,4], ~m);
+out.rateUp = out.shiftRate([1,4],m);
+out.rateDown = out.shiftRate(2,m);
+out.rateSpont = out.shiftRate(5,m);
 
+%%
 %%%%%%%%%%%%%%%%%%%%%
 % Save to output
 %%%%%%%%%%%%%%%%%%%%%
