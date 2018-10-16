@@ -18,12 +18,13 @@ cats = {'Control', 'ChABC'};
 
 %Create the figure
 f = figure(102); clf
-set(f, 'Units', 'inches', 'Position', [0.5, 3.5, 6.5, 7])
+set(f, 'Units', 'inches', 'Position', [24, 7, 6, 5.75])
 
-%Plot List
+%Marker List
 mkrs = {'o', 'd', '+'};
+
 barCents =1:4;
-col = {'b', 'r'};
+
 
 %% Plot max streches
 subplot(2,1,1); cla
@@ -41,8 +42,8 @@ for i = 1:numCats
     tStretch = []; nStretch = [];
     for j = 1:numSets
         %Running list
-        tStretch = [tStretch,  subset(j).tStretch'];
-        nStretch = [nStretch, subset(j).ntStretch(:)'];
+        tStretch = [tStretch,  subset(j).tStretch];
+        nStretch = [nStretch, subset(j).ntStretch(:)];
         
         %Plot the stretches
         tXs = i*ones(size(subset(j).tStretch));
@@ -50,9 +51,7 @@ for i = 1:numCats
         scatter([tXs', nXs'], [subset(j).tStretch', subset(j).ntStretch(:)'],'k', 'Marker', mkrs{j}); hold on
     end
     
-    bar([i, i+2], [mean(tStretch), mean(nStretch)], col{i}, 'FaceAlpha', 0.6)
-    errorbar([i, i+2], [mean(tStretch), mean(nStretch)], [std(tStretch, 1), std(nStretch,1)], col{i}, 'Marker', '.')
     
     
 end
-xlim([0, 5])
+a = 1;
