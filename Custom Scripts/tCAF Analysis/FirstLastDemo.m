@@ -1,5 +1,6 @@
 %tCAF analysis script for Nerurkar and Otchy (2018) and Darkwa, Nerurkar,
-%and Otchy (2018). 
+%and Otchy (2018). This makes spectrogram and syllable duration histograms
+%for selected days of the dataset.
 
 %% Set function constants
 
