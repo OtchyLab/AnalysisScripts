@@ -27,6 +27,7 @@ LP_fNorm = LP/(fs/2);
 
 %Set colormap
 cols=get(gca,'DefaultAxesColorOrder');
+load('tCAF_cmap.mat');
 
 %Load the intervals file (from Metermeter2 output)
 fLoc = [mother, filesep, file];
@@ -36,9 +37,8 @@ load(fLoc, 'pData');
 %% Plot spectrograms of the first and last days in the dataset
 
 %Define the figure to make
-figure(98); clf
-set(gcf, 'Units', 'inches', 'Position', [0.500, 7.75, 7.5, 2.75])
-load('tCAF_cmap2.mat');
+figure(99); clf
+set(gcf, 'Units', 'inches', 'Position', [0.25, 1.75, 4, 9])
 
 %Pointer to which days and files to plot)
 pDay = 6;% Baseline example
@@ -47,14 +47,73 @@ pntr = 1;
 %Prep signal
 sig = pData(pDay).audio{pntr};
 filtSig = filtfilt(BP_b, BP_a, 10.*(sig-mean(sig)));
-
+    
 %Plot spectrograms
-displaySpecgramQuick(filtSig, fs,[300,8000],[-3,23],0);
+displaySpecgramQuick(filtSig, fs,[300,8000],[],0);
 h = gca;
+    
+    %Format axis
+    set(h, 'Box', 'off', 'TickDir', 'out')
 h.Colormap = cmap;
 
-%Format axis
-set(h, 'Box', 'off', 'TickDir', 'out')
+% %% Plot the histograms of the duration of each syllable
+% 
+% %Combine gap intervals (if requested)
+% numInts = 3;
+% ints = [1,2; 3,4; 5,nan];
+% data = [];
+% r = 1;
+% for i = days %days
+%     for j = 1:numInts %intervals
+%         if ~isnan(ints(j,2))
+%             data(r,:,j) = pData(i).intervals(:,ints(j,1)) + pData(i).intervals(:,ints(j,2));
+%         else
+%             data(r,:,j) = pData(i).intervals(:, ints(j,1));
+%         end
+%         
+%     end
+%     r = r+1;
+% end
+% 
+% %Estimate the range of the data
+% binSize = 2; %bin size in ms
+% rg = [];
+% for i = 1:numInts
+%     t = data(:,:,i); %all data for each syllable
+%     rg(i,1) = min(t(:))-binSize;
+%     rg(i,2) = max(t(:))+binSize;
+% end
+% 
+% %Calculate the histograms for each syllable each day
+% 
+% 
+% %Plot histograms (D1)
+% for i = 1:numInts
+%     subplot(4, 2, (2*i+1)); cla
+%     h = histogram(squeeze(data(1,:,i)), 'LineWidth', 1, 'FaceColor', 'b', 'FaceAlpha', 0.6);
+%     hold on
+%     
+%     %Format
+%     h.BinLimits = rg(i,:);
+%     h.BinWidth = binSize;
+%     set(gca, 'Box', 'off', 'TickDir', 'out') 
+%     ylim([0, 35])
+%     ylabel(['Syllable ' num2str(i) ' Counts'])
+% end
+% xlabel('Interval Duration (ms)')
+% 
+% %Plot histograms (D2)
+% for i = 1:numInts
+%     subplot(4, 2, (2*i+2))
+%     h = histogram(squeeze(data(2,:,i)), 'LineWidth', 1, 'FaceColor', 'r', 'FaceAlpha', 0.6);
+% 
+%     %Format
+%     h.BinLimits = rg(i,:);
+%     h.BinWidth = binSize;
+%     set(gca, 'Box', 'off', 'TickDir', 'out')
+%     ylim([0, 35])
+% end
+% xlabel('Interval Duration (ms)')
 
 %% Plot the histograms for the designated days of the file
 

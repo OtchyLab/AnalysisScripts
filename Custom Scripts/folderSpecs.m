@@ -8,14 +8,15 @@
 %Set the folder to scan
 % folder = 'C:\Users\Tim\Desktop\Iso Paper Images\Example Tutored\045dph';
 % folder = 'C:\Users\Tim\Desktop\Anestetized Singing Bird\2018-03-22\';
-folder = 'C:\Users\Tim\Desktop\Matlab Code\General Scripts\Custom Scripts\tCAF Analysis';
-% folder = 'C:\Users\Tim\Desktop\Iso Paper Images\Example Tutor';
+% folder = 'C:\Users\Tim\Desktop\Matlab Code\General Scripts\Custom Scripts\tCAF Analysis';
+folder = '/Users/Tim/Documents/MATLAB/General/Custom Scripts/tCAF Analysis';
 
 %Constants for Bandpass Audio (300-8000Hz)
 fs = 44150;
 HP_fNorm = 300/(fs/2);
 LP_fNorm = 10000/(fs/2); %Changed 7/26/12 to match Farhan and Cengiz
 [BP_b,BP_a] = butter(2,[HP_fNorm LP_fNorm]);
+load('tCAF_cmap2.mat');
 
 %Scan folder
 files = dir([folder filesep '*.wav']);
@@ -34,13 +35,16 @@ for i = 1:numel(files)
 %     raw = d(1,:);
     
     %Process the audio
-    faudio = filtfilt(BP_b, BP_a, raw');
+    faudio = filtfilt(BP_b, BP_a, (raw-mean(raw))');
     
     %Plot spectrogram to a new figure
-    figure('Name', files(i).name)
-    displaySpecgramQuick(faudio, fs,[500,10000],[],0);
+    figure('Name', files(i).name); clf
+    displaySpecgramQuick(faudio, fs, [0,8000], [-9.5,12], 0);
+    h = gca;
+    h.Colormap = cmap;
+    set(h, 'Box', 'off', 'TickDir', 'out')
     
     %Format the figure
-    set(gcf, 'Units', 'inches', 'Position', [1, 1, 6, 1.5])
+    set(gcf, 'Units', 'Inches', 'Position', [0.5, 7.75, 13.5, 2.5])
     
 end
