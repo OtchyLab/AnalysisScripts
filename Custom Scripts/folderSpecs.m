@@ -7,9 +7,9 @@
 
 %Set the folder to scan
 % folder = 'C:\Users\Tim\Desktop\Iso Paper Images\Example Tutored\045dph';
-% folder = 'C:\Users\Tim\Desktop\Anestetized Singing Bird\2018-03-22\';
+folder = 'C:\Users\Tim\Desktop\Matlab Code\General Scripts\Custom Scripts\tCAF Analysis\Example Spectrogram Sources';
 % folder = 'C:\Users\Tim\Desktop\Matlab Code\General Scripts\Custom Scripts\tCAF Analysis';
-folder = '/Users/Tim/Documents/MATLAB/General/Custom Scripts/tCAF Analysis';
+% folder = '/Users/Tim/Documents/MATLAB/General/Custom Scripts/tCAF Analysis';
 
 %Constants for Bandpass Audio (300-8000Hz)
 fs = 44150;
