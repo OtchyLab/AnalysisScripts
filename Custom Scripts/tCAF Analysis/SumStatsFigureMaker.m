@@ -176,9 +176,9 @@ xlabel('Drive Up                        Drive Down                        Spont 
 
 %% Create the % breakout figure
 f = figure(104); clf
-set(f, 'Units', 'inches', 'Position', [39, 5.5, 5.5, 7.5])
+set(f, 'Units', 'inches', 'Position', [6, 5.5, 5.5, 7.5])
 % stretchCents =[1, 2, 4, 5];
-stretchCents = [1, 2, 3, 5, 6];
+stretchCents = [1, 2, 3, 5, 6, 7];
 rateCents =[1, 2, 3, 5, 6, 7, 9, 10, 11];
 
 %Plot max streches
@@ -206,41 +206,45 @@ for i = 1:numCats
             scatter([tXs', nXs'], 100.*[(subset(j).stretch.target./subset(j).bdur.target)', (subset(j).stretch.nontarget(:)./subset(j).bdur.nontarget(:))'],'k', 'Marker', mkrs{j}, 'jitter','on', 'jitterAmount',0.05); hold on
         end
         
-        bar(stretchCents([i, i+3]), [mean(tStretch), mean(nStretch)], col{i}, 'FaceAlpha', 0.6, 'BarWidth', 0.3)
-        errorbar(stretchCents([i, i+3]), [mean(tStretch), mean(nStretch)], [std(tStretch, 1), std(nStretch,1)], col{i}, 'Marker', '.', 'MarkerSize', 10, 'LineStyle', 'none')
-        
+%         bar(stretchCents([i, i+3]), [mean(tStretch), mean(nStretch)], col{i}, 'FaceAlpha', 0.6, 'BarWidth', 0.3)
+%         errorbar(stretchCents([i, i+3]), [mean(tStretch), mean(nStretch)], [std(tStretch, 1), std(nStretch,1)], col{i}, 'Marker', '.', 'MarkerSize', 10, 'LineStyle', 'none')
+%         
     else %ChABC plots
         
-        toStretch = []; tnStretch = []; nStretch = [];
+        toStretch = []; tnStretch = []; naStretch = []; nbStretch = [];
         for j = 1:numSets
+            
             %Running list
             if strcmp(subset(j).bird, 'LW60') %no switch
                 toStretch = [toStretch,  100.*(subset(j).stretch.target./subset(j).bdur.target)'];
+                naStretch = [naStretch, 100.*(subset(j).stretch.nontarget(:)./subset(j).bdur.nontarget(:))'];
                 tXs = stretchCents(i)*ones(size(subset(j).stretch.target));
+                nXs = stretchCents(i+3)*ones(size(subset(j).stretch.nontarget(:)));
             elseif strcmp(subset(j).bird, 'LW58') %switch
                 tnStretch = [tnStretch,  100.*(subset(j).stretch.target./subset(j).bdur.target)'];
+                nbStretch = [nbStretch, 100.*(subset(j).stretch.nontarget(:)./subset(j).bdur.nontarget(:))'];
                 tXs = stretchCents(i+1)*ones(size(subset(j).stretch.target));
+                nXs = stretchCents(i+4)*ones(size(subset(j).stretch.nontarget(:)));
             end
-            nStretch = [nStretch, 100.*(subset(j).stretch.nontarget(:)./subset(j).bdur.nontarget(:))'];
-            
-            %Plot the stretches
-            
-            nXs = stretchCents(i+3)*ones(size(subset(j).stretch.nontarget(:)));
-            
+
             scatter([tXs', nXs'], 100.*[(subset(j).stretch.target./subset(j).bdur.target)', (subset(j).stretch.nontarget(:)./subset(j).bdur.nontarget(:))'],'k', 'Marker', mkrs{j}, 'jitter','on', 'jitterAmount',0.05); hold on
         end
         
-        bar(stretchCents([i, i+1, i+3]), [mean(toStretch), mean(tnStretch),mean(nStretch)], col{i}, 'FaceAlpha', 0.6, 'BarWidth', 0.3)
-        errorbar(stretchCents([i, i+1, i+3]), [mean(toStretch), mean(tnStretch),mean(nStretch)], [std(toStretch, 1), std(tnStretch, 1),std(nStretch,1)], col{i}, 'Marker', '.', 'MarkerSize', 10, 'LineStyle', 'none')
+        bar(stretchCents, [mean(tStretch), mean(toStretch), mean(tnStretch), mean(nStretch), mean(naStretch),mean(nbStretch)], col{i}, 'FaceAlpha', 0.6, 'BarWidth', 0.6)
+        errorbar(stretchCents, [mean(tStretch), mean(toStretch), mean(tnStretch), mean(nStretch),mean(naStretch),mean(nbStretch)], [std(tStretch, 1), std(toStretch, 1), std(tnStretch, 1),std(nStretch,1),std(naStretch,1),std(nbStretch,1)], col{i}, 'Marker', '.', 'MarkerSize', 10, 'LineStyle', 'none')
+        
+%         bar(stretchCents([i, i+1, i+3, i+4]), [mean(toStretch), mean(tnStretch),mean(naStretch),mean(nbStretch)], col{i}, 'FaceAlpha', 0.6, 'BarWidth', 0.3)
+%         errorbar(stretchCents([i, i+1, i+3, i+4]), [mean(toStretch), mean(tnStretch),mean(naStretch),mean(nbStretch)], [std(toStretch, 1), std(tnStretch, 1),std(naStretch,1),std(nbStretch,1)], col{i}, 'Marker', '.', 'MarkerSize', 10, 'LineStyle', 'none')
+%         
         
     end
     
 end
 %Format
-xlim([0, 7])
+xlim([0, 8])
 ylim([-5, 20])
 set(gca, 'Box', 'off', 'TickDir', 'out')
-set(gca, 'Box', 'off', 'YTick', -5:10:25, 'XTick', stretchCents, 'XTickLabel', {'Basline', 'Pre-Exist', 'New', 'Baseline', 'ChABC'})
+set(gca, 'Box', 'off', 'YTick', -5:10:25, 'XTick', stretchCents, 'XTickLabel', {'Baseline', 'Stable', 'Re-Seq'})
 ylabel('Max Stretch (%)')
 xlabel('Target                          Non-Target')
 
@@ -312,7 +316,7 @@ end
 xlim([0, 12])
 ylim([0, 3.5])
 set(gca, 'Box', 'off', 'TickDir', 'out')
-set(gca, 'YTick', [0,3], 'XTick', rateCents, 'XTickLabel', {'Intact', 'ChABC', 'Intact', 'ChABC', 'Intact', 'ChABC'})
+set(gca, 'YTick', [0,3], 'XTick', rateCents, 'XTickLabel', {'Baseline', 'Stable', 'Re-Seq'})
 ylabel('Stretch rate (%/day)')
 xlabel('Drive Up           Drive Down            Spont Down')
 
