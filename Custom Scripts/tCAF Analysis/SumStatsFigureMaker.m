@@ -306,7 +306,7 @@ for i = 1:numCats
                 bar(rateCents([i+1, i+3+1, i+6+1]), abs([mean(dUp), mean(dDown), mean(dSpont)]), col{i}, 'FaceAlpha', 0.6, 'BarWidth', 0.2)
         errorbar(rateCents([i+1, i+3+1, i+6+1]), abs([mean(dUp), mean(dDown), mean(dSpont)]), [std(dUp), std(dDown), std(dSpont)], col{i}, 'Marker', '.', 'MarkerSize', 10, 'LineStyle', 'none')
             end
-           
+            
         end
         
         
