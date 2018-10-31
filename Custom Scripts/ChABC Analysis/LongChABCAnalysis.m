@@ -5,13 +5,13 @@
 clear
 
 %File location
-mother = 'C:\Users\Tim\Desktop\';
-% mother = '/Users/Tim/Dropbox';
+% mother = 'C:\Users\Tim\Desktop\';
+mother = '/Users/Tim/Dropbox';
 
 %ChABC into RA
 % file = 'LLY77_0219-0423_intervals.mat'; %<=== Update this to load different file
-% file = 'LLY72_0108-0210_intervals.mat';
-file = 'LR71_0108-0210_intervals.mat';
+file = 'LLY72_0108-0210_intervals.mat';
+% file = 'LR71_0108-0210_intervals.mat';
 
 %Load the intervals file (from Metermeter2 output)
 fLoc = [mother, filesep, file];
@@ -22,7 +22,7 @@ load('tCAF_cmap2.mat');
 
 %Timepoints
 pre = [-3, -2, -1];
-post = [5:10, 15, 20, 25, 30];
+post = [6:10, 15, 20, 25, 30];
 xs = [pre, post];
 
 %Number of pre-injection days
@@ -145,12 +145,12 @@ errorbar(-1, mean(preCV), std(preCV,1)./sqrt(numInts), 'ok')
 shadedErrorBar(post, smooth(mean(postCV, 2)', 3)', std(postCV, 1, 2)'./sqrt(numInts), [], 1)
 
 %Formatting
-xlim([-5, 45]); ylim([0, 6])
+xlim([-5, 45]); ylim([0, 13])
 xlabel('Days Post-Lesion')
 ylabel('Interval Duration CV (%)')
 
 set(gca, 'Box', 'off', 'TickDir', 'out')
-set(gca, 'YTick', 0:2.5:6)
+set(gca, 'YTick', 0:2.5:13)
 
 
 

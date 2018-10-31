@@ -76,7 +76,7 @@ seqCounts = [];
 rankRange = 1:8;
 for i = 1:numFiles
     for j = rankRange
-        %Capture all squences of rank i
+        %Capture all squences of rank j
         [allSeq, startSeq] = sortSequences(annots{i}, j);
         
         %Sort sequences by prevalance
