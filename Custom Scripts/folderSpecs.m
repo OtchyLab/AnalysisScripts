@@ -7,7 +7,7 @@
 
 %Set the folder to scan
 % folder = 'C:\Users\Tim\Desktop\Iso Paper Images\Example Tutored\045dph';
-folder = 'C:\Users\Tim\Desktop\Matlab Code\General Scripts\Custom Scripts\tCAF Analysis\Example Spectrogram Sources';
+folder = 'C:\Users\Tim\Desktop\Matlab Code\General Scripts\Custom Scripts\ChABC Analysis\ChABC Example Specs';
 % folder = 'C:\Users\Tim\Desktop\Matlab Code\General Scripts\Custom Scripts\tCAF Analysis';
 % folder = '/Users/Tim/Documents/MATLAB/General/Custom Scripts/tCAF Analysis';
 
@@ -39,7 +39,7 @@ for i = 1:numel(files)
     
     %Plot spectrogram to a new figure
     figure('Name', files(i).name); clf
-    displaySpecgramQuick(faudio, fs, [0,8000], [-9.5,12], 0);
+    displaySpecgramQuick(faudio, fs, [0,8000], [-8.5,12], 0);
     h = gca;
     h.Colormap = cmap;
     set(h, 'Box', 'off', 'TickDir', 'out')
