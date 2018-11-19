@@ -14,7 +14,7 @@ birdMarker = 1;
 % birdMarker = 2;
 
 %Define/clear structures
-% featCube = []; snipsCube = []; startsCube = []; filesCube = []; patternList = []; snipSet = []; zCube = [];birdID = [];
+%featCube = []; snipsCube = []; startsCube = []; filesCube = []; patternList = []; snipSet = []; zCube = [];birdID = [];
 
 %Sequentially load files for processing
 for i = 1:numel(toLoad)
@@ -642,7 +642,7 @@ end
 %Perform tSNE embedding
 rng('default') % for reproducibility
 % options = statset('MaxIter',5000);
-[Y, loss] = tsne(snipSet','Algorithm','exact', 'NumPCAComponents', 50, 'Distance', 'euclidean', 'NumDimensions', 2, 'Perplexity', 20);
+[Y, loss] = tsne(snipSet','Algorithm','exact', 'NumPCAComponents', 50, 'Distance', 'euclidean', 'NumDimensions', 2, 'Perplexity', 15);
 % Y = tsne(snipSet','Algorithm','barneshut', 'Distance', 'euclidean', 'NumDimensions', 2, 'Perplexity', 100);
 % figure; scatter(Y(:,1),Y(:,2))
 
@@ -684,10 +684,10 @@ for i = 1:numel(patternTypes)
     scatter(Y(idx,1), Y(idx,2), 'MarkerFaceColor', colors(i,:),'MarkerEdgeColor', colors(i,:), 'Marker', 'o'); hold on
 
 end
-%xlim([-60, 60]); ylim([-80, 60]);
+xlim([-50, 50]); ylim([-50, 50]);
 xlabel('t-SNE D1'); ylabel('t-SNE D2')
 set(gca, 'Box', 'off', 'TickDir', 'out')
-%set(gca, 'XTick', [-60, 0, 60], 'YTick', [-80, 0, 60])
+set(gca, 'XTick', [-50, 0, 50], 'YTick', [-50, 0, 50])
 
 %% 
 figure(939); clf
