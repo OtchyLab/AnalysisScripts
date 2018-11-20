@@ -1,4 +1,4 @@
-function [seqMatrix, seqProbMatrix, types, mainTrans] = makeTransMatrix(annotation)
+function [seqMatrix, seqProbMatrix, types, mainTrans, h] = makeTransMatrix(annotation)
 %Simple function to load an annotation (from passed file location), and
 %calculate a transition probability matrix. Outputs are a (1) passed out
 %and (2) plotted transition matrix.
@@ -56,7 +56,7 @@ I = find(res>0 & res<0.1);
 mainTrans = [mainTrans; row, col];
 
 %Prep the figure
-figure('Name', annotation(1:end-15)); clf
+h = figure('Name', annotation(1:end-15)); clf
 set(gcf, 'Units', 'Inches', 'Position', [1.5, 6, 11, 4.5])
 
 %Plot the counts matrix

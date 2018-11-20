@@ -2,31 +2,34 @@
 %makeTransMatrix.m). Saves summary data to file for later processing.
 
 %% Setup the script
-clear
+%clear
 
 %Folder to load annotation files from
-% mother = 'C:\Users\Tim\Desktop\';
-mother = '/Users/Tim/Documents/MATLAB/General/Custom Scripts/Sequences/ChABC Seqs';
-annots = dir([mother filesep '*annotation.mat']);
 
 %ChABC in HVC
-type = 'HVC_ChABC';
+% mother = '/Users/Tim/Dropbox/Summary Ints/HVC';
+% type = 'HVC_ChABC';
 
 %PBS in HVC
-%type = 'HVC_PBS';
+% mother = '/Users/Tim/Dropbox/Summary Ints/PBS';
+% type = 'HVC_PBS';
 
 %ChABC into RA
-% type = 'RA_ChABC';
+mother = '/Users/Tim/Dropbox/Summary Ints/RA';
+type = 'RA_ChABC';
+
+annots = dir([mother filesep '*annotation.mat']);
 
 %Where to save the output
-outFile = 'seqStats_v1.mat';
+mos = '/Users/Tim/Dropbox/Summary Ints';
+outFile = 'seqStats_all_v1.mat';
 
 %% Sequentially process the annotations
 
 for i = 1:numel(annots)
     %Retrieve the matrices
     fname = [mother, filesep, annots(i).name];
-    [seqMatrix, seqProbMatrix, sylTypes, mainTrans] = makeTransMatrix(fname);
+    [seqMatrix, seqProbMatrix, sylTypes, mainTrans, figHand(end+1)] = makeTransMatrix(fname);
     
     %Parse name
     sp = regexp(annots(i).name, '_', 'split');
@@ -44,7 +47,7 @@ for i = 1:numel(annots)
     seqStats.seqProbMatrix = seqProbMatrix;
     
     %Save to file
-    outName = [mother, filesep, outFile];
+    outName = [mos, filesep, outFile];
     m = exist(outName);
     if m == 2
         %File already exists
@@ -63,8 +66,11 @@ end
 
 %% Calculate Difference Matrix and 
 diffStats = [];
+
 bVect = getFieldVectorCell(stats, 'bird');
 birdlist = unique(bVect);
+bool = strcmp(birdlist, 'LW58');
+birdlist(bool) = [];
 
 for i = 1:numel(birdlist)
     %Masking
@@ -96,7 +102,7 @@ for i = 1:numel(birdlist)
     diffStats(i).diffScore = diffScore;
 
     %Add the difference matrix to the plot
-    figure('Name', [subset(2).filename(1:end-15), ' DiffMat']);
+    h = figure('Name', [subset(2).filename(1:end-15), ' DiffMat']);
     
     %Plot the counts matrix
     imagesc([1 numel(sylTypes)],[1 numel(sylTypes)], seqDiffMatrix, [0, 1]);
@@ -110,17 +116,68 @@ for i = 1:numel(birdlist)
     set(gca, 'XTick', 1:numel(sylTypes), 'XTickLabel', sylTypes)
     set(gca, 'YTick', 1:numel(sylTypes), 'YTickLabel', sylTypes)
     
+    savefig(h, [mos, filesep, subset(2).filename(1:end-15), '.fig'])
 end
 
+tVect = getFieldVectorCell(diffStats, 'type');
+[typelist, I] = sort(tVect);
+diffStats = diffStats(I);
+
 %Save to file
-outName = [mother, filesep, 'diffStats.mat'];
+outName = [mos, filesep, 'diffStats.mat'];
 
 %Save the updated data to file
 save(outName, 'diffStats')
 
 disp(['Done with diffStats.mat'])
 
+%% Plot the difference scores by category
 
+%Get indices
+tVect = getFieldVectorCell(diffStats, 'type');
+typelist = unique(tVect);
+typelist = typelist([1, 3, 2]);
+diffScoreVect = getFieldVector(diffStats, 'diffScore');
+xs = 1:3;
 
+ms = [];
+ss = [];
+xss = []; yss = [];
+for i = 1:numel(typelist)
+    %Masking
+    mask = ismember(tVect, typelist(i));
+    subset = diffScoreVect(mask);
+    
+    %Descriptive stats
+    ms(i) = mean(subset);
+    ss(i) = std(subset);
+    
+    %Scatter totals
+    xss = [xss, xs(i)*ones(size(subset))];
+    yss = [yss, subset];
+end
+
+%Add the difference matrix to the plot
+h = figure('Name', 'Summary Difference Scores'); clf
+set(gcf, 'Units', 'Inches', 'Position', [7, 6.75, 5, 3.75])
+
+%Plot the bar
+b = bar(xs, ms, 'k'); hold on
+b.LineWidth = 1.5;
+b.FaceColor = [0.5, 0.5, 0.5];
+
+e = errorbar(xs, ms, ss, 'Color', 'k', 'LineStyle', 'none');
+e.LineWidth = 1.5;
+
+s = scatter(xss, yss, 'ok', 'jitter','on', 'jitterAmount',0.05);
+s.SizeData = 100;
+
+xlim([0, 4])
+ylabel('Sequence Difference Score')
+set(gca, 'Box', 'off', 'TickDir', 'out')
+set(gca, 'XTick', xs, 'XTickLabel', typelist)
+set(gca, 'YTick', [0, 0.5])
+
+% savefig(h, [mos, filesep, subset(2).filename(1:end-15), '.fig'])
 
 

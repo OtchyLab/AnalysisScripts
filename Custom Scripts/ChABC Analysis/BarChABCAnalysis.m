@@ -1,33 +1,50 @@
 %pre-post ChABC injections analysis script for Darkwa, Nerurkar, Semu, and Otchy (2018).
-%This makes a few bar plots for example animals.
+%This makes a few bar plots for example animals. The Final few sections
+%allow collating datat across animals for summary plots
 
 %% Set function constants
 clear
 
 %File location
-% mother = 'C:\Users\Tim\Desktop\';
-mother = '/Users/Tim/Dropbox';
-outFile = 'summaryStats_v3.mat';
+mo = '/Users/Tim/Dropbox/Summary Ints';
+outFile = 'longTemporalData_v1.mat';
 
 %ChABC in HVC
-%type = 'HVC_ChABC';
-%file = 'LLY72_0108-0210_intervals.mat';
-%file = 'LR71_0108-0210_intervals.mat';
+type = 'HVC_ChABC';
+mother = '/Users/Tim/Dropbox/Summary Ints/HVC';
+% file = 'LLY72_0108-0210_intervals.mat';
+% file = 'LR71_0108-0210_intervals.mat';
+% file = 'LR47_0216-0321_intervals.mat';
+% file = 'LR58_0216-0321_intervals.mat';
+file = 'LW58_0717-0819_intervals.mat';
+% file = 'LW60_0717-0819_intervals.mat';
 
 %ChABC into RA
-type = 'RA_ChABC';
-file = 'LLY77_0219-0423_intervals.mat'; %<=== Update this to load different file
+% type = 'RA_ChABC';
+% mother = '/Users/Tim/Dropbox/Summary Ints/RA';
+% file = 'LLY77_0219-0423_intervals.mat'; %<=== Update this to load different file
+% file = 'LR60_0109-0212_intervals.mat';
+% file = 'LLR23_0109-0212_intervals.mat';
+% file = 'LLY41RB_0219-0325_intervals.mat';
+
+%PBS into HVC
+% type = 'HVC_PBS';
+% mother = '/Users/Tim/Dropbox/Summary Ints/PBS';
+% file = 'LR41_0330-0502_intervals.mat';
+% file = 'LLB88_0303-0406_intervals.mat';
 
 %Load the intervals file (from Metermeter2 output)
 fLoc = [mother, filesep, file];
 load(fLoc, 'pData');
 
+sp = regexp(file, '_', 'split');
+
 %Timepoints
 pre = -3:-1;
 p5 = 5:6;
-p10 = 9:11;
-p20 = 19:21;
-p30 = 29:31;
+p10 = 9:12;
+p20 = 18:22;
+p30 = 29:34;
 
 %% Prepare the data and calculate summary stats
 
@@ -87,6 +104,7 @@ for i = idx(mask)
     q = [q; squeeze(data(i,:,:))];
 end
 j = j+1;
+procData(j).bird = sp{1};
 procData(j).type = type;
 procData(j).pnt = 'Pre';
 procData(j).intDur = q;
@@ -158,14 +176,18 @@ for i = 1:numBins
     procData(i).intCV = 100.*nanstd(procData(i).intDur,1)./nanmean(procData(i).intDur,1);
     procData(i).intMCV = mean(procData(i).intCV);
     procData(i).intSCV = std(procData(i).intCV, 1);
+    
+    if isempty(procData(i).intCV)
+        procData(i).intCV = NaN;
+    end
 end
 
 
 %% Plot the output
 
 %Define the figure to make
-figure(70); clf
-set(gcf, 'Units', 'inches', 'Position', [5.25,6.75,11.75,3.5])
+h = figure(70); clf
+set(gcf, 'Units', 'inches', 'Position', [5.25,6.75,9,3.5])
 
 %Arrange for plotting
 mMeans = getFieldVector(procData, 'motifMean');
@@ -217,23 +239,149 @@ ylabel('Interval CV (%)')
 set(gca, 'Box', 'off', 'TickDir', 'out')
 set(gca, 'YTick', 0:5:10, 'XTick', xs, 'XTickLabel', mLabels)
 
-%% Pump it to the running save file
+savefig(h, [mother, filesep, file(1:end-13), 'tempStats.fig'])
+
+% %% Pump it to the running save file
+% 
+% %%%%%%%%%%%%%%%%%%%%%
+% % Save to output
+% %%%%%%%%%%%%%%%%%%%%%
+% outName = [mo, filesep, outFile];
+% m = exist(outName);
+% if m == 2 
+%     %File already exists
+%     load(outName, 'stats')
+%     stats(end+1) = procData;
+% else
+%     %No file yet created
+%     stats = procData;
+% end
+% 
+% %Save the updated data to file
+% save(outName, 'stats')
+% 
+% display('done with the proc file')
+
+%% Strip the good stuff and save to file
+
+summaryOut = 'summaryStats_all_v1.mat';
+
+out = [];
+out.bird = procData(1).bird;
+out.type = procData(1).type;
+out.bins = getFieldVectorCell(procData,'pnt');
+out.motifMean = getFieldVector(procData,'motifMean');
+out.CVMean = getFieldVector(procData,'intMCV');
 
 %%%%%%%%%%%%%%%%%%%%%
 % Save to output
 %%%%%%%%%%%%%%%%%%%%%
-outName = [mother, filesep, outFile];
+outName = [mo, filesep, summaryOut];
 m = exist(outName);
 if m == 2 
     %File already exists
     load(outName, 'stats')
-    stats(end+1) = procData;
+    stats(end+1) = out;
 else
     %No file yet created
-    stats = procData;
+    stats = out;
 end
 
 %Save the updated data to file
 save(outName, 'stats')
 
-display('done')
+display('done with the summary file')
+
+%% Plot the summary across animals
+
+%Add the difference matrix to the plot
+h1 = figure('Name', 'Motif Length Change'); clf
+set(gcf, 'Units', 'Inches', 'Position', [11.75,3.25,5.75,4.5])
+
+%Get indices
+tVect = getFieldVectorCell(stats, 'type');
+typelist = unique(tVect);
+typelist = typelist([1, 3, 2]);
+xs = 1:5;
+
+mmCell = getFieldVectorCell(stats, 'motifMean');
+mmVect = cell2mat(mmCell');
+for i = 1:numel(typelist)
+    %Masking
+    mask = ismember(tVect, typelist(i));
+    subset = mmVect(mask,:);
+    
+    %Normalize by pre
+    nsubset = subset./subset(:,1);
+    
+    %Descriptive stats
+    ms = nanmean(nsubset, 1);
+    ss = nanstd(nsubset, 1, 1);
+
+    %Scatter totals
+    r = repmat(xs+6*(i-1), size(nsubset,1), 1);
+    xss = r(:);
+    yss = nsubset(:); 
+%     yss = nsubset(:);
+%     xss = repmat(xs+6*(i-1), 1, size(nsubset,1));
+%     
+    %Plot the bar
+    b = bar(xs+6*(i-1), ms, 'k'); hold on
+    b.LineWidth = 1.5;
+    b.FaceColor = [0.5, 0.5, 0.5];
+
+    e = errorbar(xs+6*(i-1), ms, ss, 'Color', 'k', 'LineStyle', 'none');
+    e.LineWidth = 1.5;
+
+    s = scatter(xss, yss, 'ok', 'jitter','on', 'jitterAmount',0.05);
+    s.SizeData = 100;
+    
+end
+xlim([0, 18]); ylim([0.5, 1.5])
+ylabel('Normalized Change in Motif Length')
+set(gca, 'Box', 'off', 'TickDir', 'out')
+set(gca, 'XTick', [1:5, 7:11, 13:17], 'XTickLabel', stats(1).bins)
+set(gca, 'YTick', 0:.5:1.5)
+
+% savefig(h, [mos, filesep, subset(2).filename(1:end-15), '.fig'])
+
+
+
+h2 = figure('Name', 'CV Change'); clf
+set(gcf, 'Units', 'Inches', 'Position', [11.75,3.25,5.75,4.5])
+
+mmCell = getFieldVectorCell(stats, 'CVMean');
+mmVect = cell2mat(mmCell');
+for i = 1:numel(typelist)
+    %Masking
+    mask = ismember(tVect, typelist(i));
+    subset = mmVect(mask,:);
+    
+    %Descriptive stats
+    ms = nanmean(subset, 1);
+    ss = nanstd(subset, 1, 1);
+
+    %Scatter totals
+    r = repmat(xs+6*(i-1), size(subset,1), 1);
+    xss = r(:);
+    yss = subset(:);
+    
+    %Plot the bar
+    b = bar(xs+6*(i-1), ms, 'k'); hold on
+    b.LineWidth = 1.5;
+    b.FaceColor = [0.5, 0.5, 0.5];
+
+    e = errorbar(xs+6*(i-1), ms, ss, 'Color', 'k', 'LineStyle', 'none');
+    e.LineWidth = 1.5;
+
+    s = scatter(xss, yss, 'ok', 'jitter','on', 'jitterAmount',0.05);
+    s.SizeData = 100;
+    
+end
+xlim([0, 18]); ylim([0, 12])
+ylabel('Song Interval CV (%)')
+set(gca, 'Box', 'off', 'TickDir', 'out')
+set(gca, 'XTick', [1:5, 7:11, 13:17], 'XTickLabel', stats(1).bins)
+set(gca, 'YTick', [0,12])
+
+
