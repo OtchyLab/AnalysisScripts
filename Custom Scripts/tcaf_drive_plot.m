@@ -5,8 +5,9 @@
 clear
 
 %Set the file to load and process
-mother = '/Users/Tim/Desktop';
-file = 'Drive1_time';
+% mother = '/Users/Tim/Desktop';
+mother = 'C:\Users\Tim\Desktop';
+file = 'LW39_Drive1';
 loc = [mother filesep file];
 
 %Load the drive file and parse ascii data to a cell array
