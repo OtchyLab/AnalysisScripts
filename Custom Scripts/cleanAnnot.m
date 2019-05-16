@@ -7,10 +7,10 @@
 % Load Data
 
 % Set the location of the input and output files/folders
-annotName = 'V:\SongbirdData\LLY72\LLY72_180121_annotation.mat';
-outputName = 'V:\SongbirdData\LLY72\LLY72_180121_annotation.mat';
+annotName = 'X:\Sil167\Sil167_100407_annotation2.mat';
+outputName = 'X:\Sil167\Sil167_100407_annotation2.mat';
 
-dataDir = 'V:\SongbirdData\LLY72\2018-01-21\';
+dataDir = 'X:\Sil167\2010-04-07';
 
 % Clean load annotation
 elements = []; keys = [];

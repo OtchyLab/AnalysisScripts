@@ -497,7 +497,7 @@ function handles = runPCA(handles, prinMat)
 [Z, handles.mu, handles.sigma] = zscore(prinMat);
 
 %Do PCA on the z-scored data
-[coeff, score, latent] = princomp(Z);
+[coeff, score, latent] = pca(Z);
 
 %Copy out the useful info
 handles.pcaCoeff = coeff;

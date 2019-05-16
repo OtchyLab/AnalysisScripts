@@ -479,6 +479,7 @@ if ~(isequal(file,0) || isequal(path,0))
                 audio{i} = r;
             end
         elseif strcmp(n(end-3:end), '.dat')
+            i
             [r, fs] = getChannels(keys{i});
             audio{i} = r(1,:)'; %Take only the first channel from multiplexed A&N recordings
         end
