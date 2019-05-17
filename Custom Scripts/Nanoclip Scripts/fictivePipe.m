@@ -14,7 +14,7 @@ birdMarker = 1;
 % birdMarker = 2;
 
 %Define/clear structures
-%featCube = []; snipsCube = []; startsCube = []; filesCube = []; patternList = []; snipSet = []; zCube = [];birdID = [];
+featCube = []; snipsCube = []; startsCube = []; filesCube = []; patternList = []; snipSet = []; zCube = [];birdID = [];
 
 %Sequentially load files for processing
 for i = 1:numel(toLoad)
