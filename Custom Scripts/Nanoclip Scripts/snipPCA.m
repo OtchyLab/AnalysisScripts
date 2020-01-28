@@ -1,10 +1,13 @@
+%Code written in response to reviewer request to use more interpretable/repeatable low-D 
+%embedding for the ficitive singing analysis
+%
 %Perform t-sne embedding of spectrogram snips from the fictive singing
 %experiment. Script will read in data from a file containing the already
 %formatted block of spectrograms, do the t-sne analysis, plot the
 %embedding, and calculate the pairwise distances.
 %
 %
-%Written by TMO 05/16/19
+%Written by TMO 01/27/20
 
 %Clear the workspace
 %clear all
@@ -33,7 +36,7 @@ rng('default') % for reproducibility
 [Y, loss] = tsne(specVec, 'Algorithm', 'exact', 'NumPCAComponents', 50, 'Exaggeration', 1, 'Distance', 'seuclidean', 'NumDimensions', 2, 'Perplexity', 35);
 
 %% Plot it
-figure(40); clf
+figure(45); clf
 
 % Linespec
 cols = linspecer(24);
