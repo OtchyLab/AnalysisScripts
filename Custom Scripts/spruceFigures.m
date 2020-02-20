@@ -1,4 +1,4 @@
-% Script is to spruce up final figures for the Lesions/Inactivations paper
+ % Script is to spruce up final figures for the Lesions/Inactivations paper
 % TMO 04-28-2015
 
 %% Figure 2 Pharma Lesion Feature Heatmaps
@@ -91,6 +91,10 @@ mauchly(rm)
 % 
 %     (Intercept):Measurements      17.055     3       5.6849    2.2065   0.14008    0.1717         0.14008       0.21161 
 %     Error(Measurements)             30.917    12      2.5764          
+%
+%
+%
+%
 %
 %Note that these values are identical to the output of the anova_rm.m script (from MFE) which is a simple rmanova, suggesting
 %that the setup for the modeling is correct.
@@ -214,11 +218,11 @@ ranovatbl = ranova(rm)
 mauchly(rm)
 epsilon(rm)
 % ranovatbl = 
-%                                              SumSq     DF    MeanSq      F         pValue      pValueGG       pValueHF      pValueLB
+%                                               SumSq     DF    MeanSq      F         pValue      pValueGG       pValueHF      pValueLB
 %                                               ______   __    ______    ______    __________    _________    _________    ________
 % 
-%     (Intercept):Measurements    4153.7     4    1038.4    19.722    4.9997e-06    0.0071906    0.0043469    0.011325
-%     Error(Measurements)          842.43    16    52.652    
+%     (Intercept):Measurements                  4153.7     4    1038.4    19.722    4.9997e-06    0.0071906    0.0043469    0.011325
+%     Error(Measurements)                       842.43    16    52.652    
 % 
 %         W               ChiStat    DF     pValue 
 %     __________    _______    __    ________

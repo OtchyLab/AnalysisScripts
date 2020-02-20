@@ -10,8 +10,7 @@
 %clear all
 
 %Source and destination data
-% sLoc = '/Users/Tim/Desktop/Nanoclip Paper Figure Stuff/FigSnips';
-sLoc = 'E:\Dropbox\Dropbox';
+sLoc = '/Users/Tim/Desktop/Nanoclip Paper Figure Stuff/FigSnips';
 
 %Load variables from file
 load([sLoc, filesep, 'Bird XXX.mat']);
