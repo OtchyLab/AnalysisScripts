@@ -1,16 +1,20 @@
-%Perform t-sne embedding of spectrogram snips from the fictive singing
+%Code written in response to reviewer request to use more interpretable/repeatable low-D 
+%embedding for the ficitive singing analysis
+%
+%Perform pca embedding of spectrogram snips from the fictive singing
 %experiment. Script will read in data from a file containing the already
-%formatted block of spectrograms, do the t-sne analysis, plot the
+%formatted block of spectrograms, do the pca analysis, plot the
 %embedding, and calculate the pairwise distances.
 %
 %
-%Written by TMO 05/16/19
+%Written by TMO 01/27/20
 
 %Clear the workspace
 %clear all
 
 %Source and destination data
-sLoc = '/Users/Tim/Desktop/Nanoclip Paper Figure Stuff/FigSnips';
+% sLoc = '/Users/Tim/Desktop/Nanoclip Paper Figure Stuff/FigSnips';
+sLoc = 'E:\Dropbox\Dropbox'; %for my work desktop
 
 %Load variables from file
 load([sLoc, filesep, 'Bird XXX.mat']);
@@ -28,11 +32,16 @@ end
 
 %% Perform tSNE embedding
 rng('default') % for reproducibility
-% options = statset('MaxIter',5000);
-[Y, loss] = tsne(specVec, 'Algorithm', 'exact', 'NumPCAComponents', 50, 'Exaggeration', 1, 'Distance', 'seuclidean', 'NumDimensions', 2, 'Perplexity', 35);
+% % options = statset('MaxIter',5000);
+% [Y, loss] = tsne(specVec, 'Algorithm', 'exact', 'NumPCAComponents', 50, 'Exaggeration', 1, 'Distance', 'seuclidean', 'NumDimensions', 2, 'Perplexity', 35);
+
+%% Perform PCA embedding
+
+[coeff,score,latent,tsquared,explained,mu] = pca(specVec);
+
 
 %% Plot it
-figure(40); clf
+figure(45); clf
 
 % Linespec
 cols = linspecer(24);
