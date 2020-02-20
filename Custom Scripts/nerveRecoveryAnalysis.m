@@ -1,7 +1,7 @@
 function nerveRecoveryAnalysis
 %Scratch paper for labmeeting analysis
 
-mother = 'C:\Users\Tim\Desktop\Song Data\Analysis';
+mother = 'V:\SongbirdData\Analysis';
 % folder = 'llb59rblk132';
 % folder = 'lr11ry176';
 % folder = 'lr14rblk17';
@@ -10,7 +10,10 @@ mother = 'C:\Users\Tim\Desktop\Song Data\Analysis';
 % folder = 'LLY14';
 % folder = 'LLY16';
 % folder = 'LLR04';
- folder = 'LLY72';
+% folder = 'LLY72';
+% folder = 'LW58';
+% folder = 'LW60';
+ folder = 'LY80';
 sourceDir = [mother, filesep, folder];
 
 datafiles = dir([sourceDir, filesep, '*.mat']);
@@ -41,67 +44,67 @@ for i = 1:numel(ind)
 end
 birdname = sp{1,1}(1,1);
 
-% %Plot specrtrograms as a single figure
-% labels = {'Pre', 'Post', 'Recovery'};
-% h(1) = figure(100); clf
-% for i = 1:numel(spectro)
-%     %Subplot select)
-%     subplot(3,1,i)
-%     imagesc(-spectro(i).pic)
-%     axis xy; axis tight
-%     colormap(jet)
-%     
-%     %Format
-%     set(gca, 'Box', 'off', 'TickDir', 'out', 'YTickLabels', '', 'LineWidth', 1)
-%     ylabel(labels(i))
-%     if i == 1
-%         title(birdname)
-%     end
-%     if i ~= numel(spectro)
-%         set(gca, 'XTickLabels', '')       
-%     end
-% end
-% %labels
-% xlabel('Time (ms)')
-% set(gcf, 'Units', 'inches', 'Position', [1, 1, 4, 6])
+%Plot specrtrograms as a single figure
+labels = {'Pre', 'Post', 'Recovery'};
+h(1) = figure(100); clf
+for i = 1:numel(spectro)
+    %Subplot select)
+    subplot(3,1,i)
+    imagesc(-spectro(i).pic)
+    axis xy; axis tight
+    colormap(jet)
+    
+    %Format
+    set(gca, 'Box', 'off', 'TickDir', 'out', 'YTickLabels', '', 'LineWidth', 1)
+    ylabel(labels(i))
+    if i == 1
+        title(birdname)
+    end
+    if i ~= numel(spectro)
+        set(gca, 'XTickLabels', '')       
+    end
+end
+%labels
+xlabel('Time (ms)')
+set(gcf, 'Units', 'inches', 'Position', [1, 1, 4, 6])
 
 
-%%%%%%%%%%%%%%%%%%
-%%%Temporal Structure
-%%%%%%%%%%%%%%%%%%
-%Load the file
-boolI = contains(files, 'temporal');
-ind = indArray(boolI);
-fullPath = [sourceDir, filesep, char(files(ind))];
-load(fullPath, 'dataOut');
-
+% %%%%%%%%%%%%%%%%%%
+% %%%Temporal Structure
+% %%%%%%%%%%%%%%%%%%
+% %Load the file
+% boolI = contains(files, 'temporal');
+% ind = indArray(boolI);
+% fullPath = [sourceDir, filesep, char(files(ind))];
+% load(fullPath, 'dataOut');
+% 
 %Day Index
 days = [-3:-1, 1:11]; %Days for plotting
 plotSymbols = {'x', 's', '+', 'd'};
-numTraces = numel(dataOut.dataType);
-
-%Plot a timeseries of syl/motif durations
-normM = [];
-h(2) = figure(101); clf
-for i = 1:(numTraces-1)
-    m = size(dataOut.int_m, 1);
-    
-    %Raw
-    subplot(2,1,1)
-    errorbar(days(1:m), dataOut.int_m(:,i), dataOut.int_std(:,i), [':' plotSymbols{i}], 'LineWidth', 1)
-    hold on
-    
-    xlim([-4, 9])
-    ylabel('Duration (ms)')
-    
-    %Normalized to baseline
-    subplot(2,1,2)
-    normM(:,i) = dataOut.int_m(:,i)./dataOut.int_m(3,i);
-    normS(:,i) = dataOut.int_std(:,i)./dataOut.int_m(3,i);
-    errorbar(days(1:m), normM(:,i), normS(:,i), [':' plotSymbols{i}], 'LineWidth', 1)
-    hold on
-    
-end
+% numTraces = numel(dataOut.dataType);
+% 
+% %Plot a timeseries of syl/motif durations
+% normM = [];
+% h(2) = figure(101); clf
+% for i = 1:(numTraces-1)
+%     m = size(dataOut.int_m, 1);
+%     
+%     %Raw
+%     subplot(2,1,1)
+%     errorbar(days(1:m), dataOut.int_m(:,i), dataOut.int_std(:,i), [':' plotSymbols{i}], 'LineWidth', 1)
+%     hold on
+%     
+%     xlim([-4, 9])
+%     ylabel('Duration (ms)')
+%     
+%     %Normalized to baseline
+%     subplot(2,1,2)
+%     normM(:,i) = dataOut.int_m(:,i)./dataOut.int_m(3,i);
+%     normS(:,i) = dataOut.int_std(:,i)./dataOut.int_m(3,i);
+%     errorbar(days(1:m), normM(:,i), normS(:,i), [':' plotSymbols{i}], 'LineWidth', 1)
+%     hold on
+%     
+% end
 % %Plot the mean normalized
 % % errorbar(days(1:m), mean(normM, 2), std(normM, 1, 2), '-ok', 'LineWidth', 1)
 % shadedErrorBar(days(1:m), mean(normM, 2), std(normM, 1, 2), 'k', 1)
@@ -185,24 +188,27 @@ save([sourceDir, filesep, 'allProcessData.mat'])
 
 %Save figures to file
 savefig(h(1), [sourceDir, filesep, 'spectrograms.fig'])
-savefig(h(2), [sourceDir, filesep, 'temporal.fig'])
-savefig(h(3), [sourceDir, filesep, 'temporalZoom.fig'])
+% savefig(h(2), [sourceDir, filesep, 'temporal.fig'])
+% savefig(h(3), [sourceDir, filesep, 'temporalZoom.fig'])
 savefig(h(4), [sourceDir, filesep, 'spectral.fig'])
 
 saveas(h(1), [sourceDir, filesep, 'spectrograms.png'])
-saveas(h(2), [sourceDir, filesep, 'temporal.png'])
-saveas(h(3), [sourceDir, filesep, 'temporalZoom.png'])
+% saveas(h(2), [sourceDir, filesep, 'temporal.png'])
+% saveas(h(3), [sourceDir, filesep, 'temporalZoom.png'])
 saveas(h(4), [sourceDir, filesep, 'spectral.png'])
 
 %Save to a common file for joint printing
-jointName = 'C:\Users\Tim\Desktop\Song Data\Analysis\nerveBirdsData.mat';
+jointName = 'C:\Users\Tim\Desktop\PI Nanoclip Paper Stuff\Functional Recovery Figure\nerveBirdsData.mat';
 
 output = [];
 output.birdname = birdname;
-output.manipulation = 'crush';
+output.manipulation = 'intact';
 output.days = days(1:m);
-output.normMeanTemp = mean(normM, 2); 
-output.normStdTemp = std(normM, 1, 2);
+% output.normMeanTemp = mean(normM, 2); clear
+
+% output.normStdTemp = std(normM, 1, 2);
+output.normMeanTemp = []; 
+output.normStdTemp = [];
 output.MeanSpect = meanSylM;
 output.StdSpect = stdSylM;
 

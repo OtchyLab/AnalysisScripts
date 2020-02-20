@@ -3,6 +3,7 @@
 %reported in the paper. The script reads in the rawdata from a previously
 %constructed .mat file containing all of the data from each condition.
 %
+% This script created the image submitted in the original ms. 
 % Written by TMO 05-14-19
 
 %Clear it all
