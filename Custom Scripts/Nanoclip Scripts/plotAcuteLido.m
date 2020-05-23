@@ -40,11 +40,14 @@ sPP = std(dataMat,1,1);
 
 %% Plot the bar plot 
 figure(41); clf
-
+sym = {'o', 'sq', '*'};
 cats = 1:numel(mPP);
 labels = {'Baseline'; 'Saline'; 'Lidocaine'; 'Washout'};
 bar(cats, mPP, 0.6, 'LineStyle', 'none'); hold on
 errorbar(cats, mPP, sPP, 'LineStyle', 'none', 'Marker', '.', 'Color', 'k', 'LineWidth', 1.5)
+for i = 1:3
+    scatter([1, 2, 3, 4], [base(i), saline(i), lido(i), washout(i)], 50, 'k', sym{i})
+end
 
 % axis square
 xlim([0.5, 4.5]); ylim([0, 1.05]);

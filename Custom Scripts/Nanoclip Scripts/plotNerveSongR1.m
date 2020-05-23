@@ -109,7 +109,7 @@ base = 1:3; d1 = 4; d7 = 11;
 
 %Plot each experimental group
 deltaM = []; deltaS = [];
-for i = 1:4 %3 groups
+for i = 1:4 % groups
     ds = [];
     for j = 1:3 %
         pntr = 3*(i-1)+j;
@@ -122,6 +122,9 @@ end
 
 bar(1:size(deltaM,2), mean(deltaM,1)); hold on
 errorbar(1:size(deltaM,2), mean(deltaM,1), std(deltaM,1), '.k');
+for i = 1:4
+   plot([(2*i-1).*ones(3,1), (2*i).*ones(3,1)]', deltaM(:,(2*i-1):(2*i))', '-ok', 'MarkerFaceColor', 'k')
+end
 
 %Format figure
 xlim([0, 9]); ylim([-0.025, 0.25])
