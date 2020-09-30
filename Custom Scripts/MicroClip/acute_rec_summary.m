@@ -1,17 +1,65 @@
+function acute_rec_summary
+%This function will do a scan through a folder containing plexme-generated
+%.mat files and will produce saved plots and summary datafiles for
+%exploring the dataset
 
-% function plotIt(dataBlock)
-%Plotting all trials of a current steering trial
+%Request input from the user on which folder to process
+folder = uigetdir('/Users/tim/Desktop/Acute Recordings/');
 
-%Ask user which file to load; check for suffix
-clear
+%Get the folder file contents and check for empties
+files = dir([folder, filesep, 'stim*.mat']);
 
-[filename, pathname, filterindex] = uigetfile('/Users/tim/Desktop/Acute Recordings/Rd40/*.mat', 'Pick a file to view', 'MultiSelect', 'off');
-load([pathname, filename]);
+if isempty(files)
+    disp('Nothing in the folder, bro... try again.')
+    return
+end
+
+%Make output directory if it's missing
+if ~exist([folder, filesep, 'Pics'])
+    mkdir([folder, filesep, 'Pics'])
+end
+
+%Sequentially process files
+for i = 1:numel(files)
+% for i = 1:3
+    cur_file = files(i).name;
+    filename = hash_stim_file(folder, cur_file);
+    
+    disp(['Finished processing file: ' filename])
+end
+
+%Finished cooking
+disp('...')
+disp(['Finished processing whole folder: ', folder])
+disp('...')
+
+
+function file = hash_stim_file(folder, file)
+%Everything to process the file and save output
+
+%Load the file
+load([folder, filesep, file]);
 dataBlock = data;
 
 %Plotting sepoarately all trials of a single sTDT recording
+birdname = dataBlock.bird;
 trials = size(dataBlock.tdt.response, 1);
 chans = size(dataBlock.tdt.response, 3);
+stim_cur = dataBlock.stim.current_uA;
+comment = dataBlock.comments;
+
+if size(comment,1) > 1
+    temp = [];
+    for j = 1:size(comment,1)
+        temp = [temp, comment(j,:)];
+        temp = [temp, '  '];
+    end
+    comment = temp;
+end
+
+if chans ~= 6
+    return
+end
 
 col = {'b', 'r', 'g', 'k', 'm', 'c'};
 
@@ -23,7 +71,7 @@ figure(6868); clf
 set(gcf, 'Units', 'Inches', 'Position', [4.5, 0.5, 3.5, 9])
 
 figure(6767); clf
-set(gcf, 'Units', 'Inches', 'Position', [8, 6, 4.25, 2.75])
+set(gcf, 'Units', 'Inches', 'Position', [8, 6, 13.25, 2.75])
 
 %Zero-align all response traces
 resp = [];
@@ -102,12 +150,21 @@ for i = 1:chans
     set(gca, 'Box', 'off', 'TickDir', 'out')
     ylabel(['Evoked response (mV)'])
     xlabel(['Time (ms)'])
+    title([birdname, '   ', num2str(stim_cur), 'uA,   ', comment], 'Interpreter', 'none')
 end
 line([0, 0], ys, 'Color', 'r', 'LineStyle', ':');
 
-path = pathname;
-savename = [path, 'Pics', filesep, dataBlock.filename(1:end-3), 'png']
+savename = [folder, filesep, 'Pics', filesep, dataBlock.filename(1:end-3), 'png'];
 saveas(f, savename, 'png') 
+
+
+
+
+
+
+
+
+
 
 
 

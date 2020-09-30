@@ -19,7 +19,8 @@ p1 = [171632, 171706;...
 
 %List all files in the recordings directory
 % homeP = 'C:\Users\Tim\Desktop\LLR32';
-homeP = 'V:\SongbirdData\LLR32';
+% homeP = 'V:\SongbirdData\LLR32';
+homeP = '/Users/tim/Desktop/Acute Recordings/LLR32';
 filelist = dir([homeP, filesep, '*.mat']);
 
 %Strip out the time to figureout which to process this time around
